@@ -1,0 +1,18 @@
+---
+title: "Data Analysis Project Report"
+author: "'STAT 420, Summer 2021, Jake Goodman (NetID: jakeg5) and Michael McClanahan"
+  (NetID: mjm31)'
+date: ''
+output:
+  html_document: 
+    theme: readable
+    toc: yes
+  pdf_document: default
+urlcolor: cyan
+---
+***
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+options(scipen = 1, digits = 4, width = 80, fig.align = "center")
+```
+
