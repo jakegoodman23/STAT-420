@@ -1,0 +1,86 @@
+---
+title: "Data Analysis Project Proposal"
+author: "STAT 420, Summer 2021, Jake Goodman (NetID: jakeg5) and Michael McClanahan (NetID: mjm31)"
+date: ''
+output:
+  html_document: 
+    theme: readable
+    toc: yes
+  pdf_document: default
+urlcolor: cyan
+bibliography: bibliography.bib
+---
+
+***
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+options(scipen = 1, digits = 4, width = 80, fig.align = "center")
+```
+
+### Contributing Students
+
+The following students will be contributing to the group project:
+
+- Jake Goodman (NetID: jakeg5)
+- Michael McClanahan (NetID: mjm31)
+
+
+### Tentative Project Title
+
+_Donation Prediction for Direct Marketing_
+
+### Data Set Background Information
+
+The data file for this project was obtained from the @statlib.  The file contains data sampled from a much larger dataset from the 1998 KDD Cup, an annual data science competition put on by the Association for Computing Machinery's @kdd_data. For the competition, a dataset containing 95412 observations and 481 variables was provided. Likely to aid in ease of analysis, the DSAL generated a sample of the same dataset, which we will use for this analysis, that contains 7600 observations with 19 variables for each observation. As was the case during the 1998 KDD Cup, each de-identified observation in the dataset contains information for someone that previously donated to a Congressionally-chartered US veterans' service organization or one of its affiliates. At the time, this national veterans' agency represented the special interests of paralyzed veterans and their families and obtained most of its funding from charitable donations.
+
+_Links to the above datasets can be found below in the [References] section._
+
+### Data File Description
+
+- File Information
+  - Name: `nvo.txt`
+  - Type: standard text document
+  - Encoding: UTF-8
+  - Delimitation Method: Tab
+- Dataset Characteristics
+  - Each record contains information about a donor that has made charitable contributions to a national veteran's agency
+  - 7600 records
+  - 19 variables
+    - 17 numeric variables _(5 of these will be ignored for this analysis)_
+    - 2 categorical variables
+- Variables of Interest
+  - Response Variable
+    - `Current.Gift`: the amount of the donor's current donation (in dollars).
+  - Explanatory Variables
+    - `Age`: the age of the donor
+    - `Own.Home.`: a categorical variable regarding whether or not the donor owns a home
+    - `Num.Children`: the number of children, if any, that the donor has
+    - `Total.Wealth`: a wealth rating from 0-9 (with 9 being the wealthiest) that is based on median family income and population statistics
+    - `Sex`: the gender of the donor
+    - `Number.of.Gifts`: the number of donations made
+    - `Time.Between.Gifts`: the avg number of months between donations
+    - `Largest.Gift`: the largest donation made (in dollars)
+    - `Smallest.Gift`: the smallest donation made (in dollars)
+    - `Other.Gifts`: number of times the donor has responded to a mail order donation offer
+    - `Average.Gift`: will be used as the response variable for this project to understand the factors behind the average donation amount someone makes
+
+_Additional `Sqrt.` variables will be ignored for this analysis_
+
+### Statement of Interest
+
+According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources and costs associated with creating marketing collateral. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency.  
+
+### Evidence that the data can be loaded into R
+
+```{r}
+library(tibble)
+nvo_data = read.table("nvo.txt", sep = "\t",header = TRUE, fileEncoding = "UTF-8")
+nvo_data = as_tibble(nvo_data)
+nvo_data
+```
+
+### References
+
+
+***
+      
