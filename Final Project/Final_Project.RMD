@@ -1,18 +1,204 @@
 ---
 title: "Data Analysis Project Report"
-author: "'STAT 420, Summer 2021, Jake Goodman (NetID: jakeg5) and Michael McClanahan"
-  (NetID: mjm31)'
-date: ''
 output:
   html_document: 
     theme: readable
     toc: yes
   pdf_document: default
 urlcolor: cyan
+#bibliography: bibliography.bib
 ---
 ***
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 options(scipen = 1, digits = 4, width = 80, fig.align = "center")
+```
+
+
+
+### Introduction
+
+According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the dataset, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency.
+
+
+
+### Methods
+
+##### Data File Description
+
+- File Information
+  - Name: `nvo.txt`
+  - Type: standard text document
+  - Encoding: UTF-8
+  - Delimitation Method: Tab
+- Dataset Characteristics
+  - Each record contains information about a donor that has made charitable contributions to a national veteran's agency
+  - 7600 records
+  - 19 variables
+    - 17 numeric variables _(6 of these will be ignored for this analysis)_
+    - 2 categorical variables
+- Variables of Interest
+  - Response Variable
+    - `Current.Gift`: the amount of the donor's current donation (in dollars).
+  - Explanatory Variables
+    - `Age`: the age of the donor
+    - `Own.Home.`: a categorical variable regarding whether or not the donor owns a home
+    - `Num.Children`: the number of children, if any, that the donor has
+    - `Total.Wealth`: a wealth rating from 0-9 (with 9 being the wealthiest) that is based on median family income and population statistics
+    - `Sex`: the gender of the donor
+    - `Number.of.Gifts`: the number of donations made
+    - `Time.Between.Gifts`: the avg number of months between donations
+    - `Largest.Gift`: the largest donation made (in dollars)
+    - `Smallest.Gift`: the smallest donation made (in dollars)
+    - `Other.Gifts`: number of times the donor has responded to a mail order donation offer
+    - `Average.Gift`: the avg donation amount (in dollars) from a donor 
+
+
+##### Data Preparation
+
+Read in the data and remove unnecessary columns. The columns variables containing reference to `Sqrt` were removed as there are already un-adjusted versions of these variables and there wouldn't be much value add to also include these adjusted versions of the variables. The `Income` variable was removed as there was not enough documentation included on what the variable signified.
+
+```{r}
+nvo_data = read.table("nvo.txt", sep = "\t",header = TRUE, fileEncoding = "UTF-8")
+
+#remove unnecessary columns from data to make model selection easier later on
+nvo_data_mod = subset(nvo_data, select = -c(Sqrt.Smallest.Gift,Sqrt.Largest.Gift,
+                                            Sqrt.Previous.Gift,Sqrt.Average.Gift,
+                                            Sqrt.Current.Gift,Income))
+
+```
+
+
+
+##### Functions
+Functions to be used later on to track model performance
+```{r}
+
+#Calculates LOOCV RMSE for a Model
+get_loocv_rmse = function(model) {
+  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+}
+
+#Calculates Adjusted R Squared Value for a Model
+get_adj_r2 = function(model) {
+  summary(model)$adj.r.squared
+}
+```
+
+
+Functions to be used later on to validate model assumptions
+```{r}
+#Uses Breusch-Pagan Test to validate Constant Variance assumption
+get_bp_value = function(model) {
+  unname(bptest(model)$p.value)
+}
+
+```
+
+Functions to be used later on to find unusual observations
+
+```{r}
+#Finds observations with leverage greater than 2 times the average leverage
+get_high_leverage = function(model){
+  hatvalues(model) > 2 * mean(hatvalues(model))
+}
+
+#Finds observations with a standardized residual greater than a magnitude of 2
+get_outliers = function(model){
+  rstandard(model)[abs(rstandard(model)) > 2]
+}
+
+#Finds observations with a cooks.distance greater than 4 / number of observations
+get_high_influcence = function(model){
+  cooks.distance(model_1) > 4 / length(cooks.distance(model))
+}
+```
+
+
+##### Model Selection
+
+Simple additive model
+
+```{r}
+
+
+model_add = lm(Current.Gift ~ ., data = nvo_data_mod)
+
+get_loocv_rmse(model_add)
+get_adj_r2(model_add)
+bptest(model_add)
+
+
+```
+
+
+Backwards Selection on Additive Model
+
+```{r}
+#aic backward selection
+model_add_back_aic = step(model_add, direction = "backward", trace = 0)
+
+get_loocv_rmse(model_add_back_aic)
+get_adj_r2(model_add_back_aic)
+bptest(model_add_back_aic)
+
+#bic backward selection
+model_add_back_bic = step(model_add, direction = "backward", k = log(nrow(nvo_data_mod)), trace = 0)
+get_loocv_rmse(model_add_back_bic)
+get_adj_r2(model_add_back_bic)
+bptest(model_add_back_bic)
+
+```
+
+
+Forwards Selection
+
+```{r}
+model_start = lm(Current.Gift ~ 1, data = nvo_data_mod)
+
+full_scope = "Current.Gift ~ Age + Own.Home. + Num.Children + Sex + Total.Wealth + 
+    Other.Gifts + Number.of.Gifts + Smallest.Gift + Largest.Gift + 
+    Previous.Gift + Time.Between.Gifts + Average.Gift"
+
+model_start_forward_aic = step(
+  model_start,
+  scope = full_scope,
+  direction = "forward",
+  trace = 0
+)
+
+get_loocv_rmse(model_start_forward_aic)
+get_adj_r2(model_start_forward_aic)
+bptest(model_start_forward_aic)
+
+model_start_forward_bic = step(
+  model_start,
+  scope = full_scope,
+  direction = "forward",
+  k = log(nrow(nvo_data_mod)),
+  trace = 0
+)
+
+get_loocv_rmse(model_start_forward_bic)
+get_adj_r2(model_start_forward_bic)
+bptest(model_start_forward_bic)
+
+```
+
+Interaction Model
+
+
+```{r}
+model_int = lm(Current.Gift ~ . ^ 2, data = nvo_data_mod)
+
+get_loocv_rmse(model_int)
+get_adj_r2(model_int)
+bptest(model_int)
+```
+
+Backwards Selection on Interaction model
+
+```{r}
+
 ```
 
