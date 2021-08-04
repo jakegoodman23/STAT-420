@@ -1,0 +1,27 @@
+
+@online{nccs
+	,author = {{National Center for Charitable Statistics (NCCS)}}
+ 	,date = 2020
+ 	,month = jun
+ 	,day = 4
+	,title = {The Nonprofit Sector in Brief 2019}
+	,url = {https://nccs.urban.org/publication/nonprofit-sector-brief-2019}
+	,lastaccessed = {July 21, 2021}
+}
+
+@online{kdd_data
+	,author = {{Special Interest Group on Knowledge Discovery and Data Mining (SIGKDD)}}
+ 	,date = 1998
+ 	,month = aug
+ 	,day = 18
+	,title = {KDD Cup 1998: Direct marketing for profit optimization}
+	,url = {https://kdd.org/kdd-cup/view/kdd-cup-1998/Data}
+	,lastaccessed = {July 21, 2021}
+}
+
+@online{statlib
+	,author = {{StatLib Data and Story Library (DSAL)}}
+	,title = {PVA | DASL}
+	,url = {https://dasl.datadescription.com/datafile/pva/}
+	,lastaccessed = {July 21, 2021}
+}
