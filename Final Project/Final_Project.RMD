@@ -30,8 +30,6 @@ According to the @nccs, as of 2016, over 1.54 million nonprofit organizations we
 
 ### Methods
 
-
-
 ##### Data File Description
 
 - File Information
@@ -95,7 +93,7 @@ nvo_cur_data = nvo_cur_data[nvo_cur_data$Smallest.Gift > 0, ]
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Largest.Gift > 0, ]
 ```
 
-###### Functions
+##### Functions
 
 ```{r}
 # functions to be used throughout the document

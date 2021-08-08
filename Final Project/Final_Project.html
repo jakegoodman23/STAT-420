@@ -255,8 +255,9 @@ nvo_cur_data = nvo_cur_data[nvo_cur_data$Time.Between.Gifts &gt; 0, ]
 # their smallest and largest gifts would be &gt; 0 logically
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Smallest.Gift &gt; 0, ]
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Largest.Gift &gt; 0, ]</code></pre>
-<div id="functions" class="section level6">
-<h6>Functions</h6>
+</div>
+<div id="functions" class="section level5">
+<h5>Functions</h5>
 <pre class="r"><code># functions to be used throughout the document
 
 # calculates LOOCV RMSE for a Model
@@ -328,7 +329,6 @@ evaluate_model = function(model) {
     res = c(&quot;LOOCV_RMSE&quot; = get_loocv_rmse(model),&quot;Adj. R-squared&quot; = get_adj_r2(model)) 
     res
 }</code></pre>
-</div>
 </div>
 <div id="model-selection-process" class="section level5">
 <h5>Model Selection Process</h5>
