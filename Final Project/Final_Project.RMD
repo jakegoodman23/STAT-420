@@ -154,6 +154,7 @@ nvo_cur_data
 
 For model training and evaluation, a 80-20 train-test split on the data was leveraged:
 ```{r}
+set.seed(420)
 nvo_trn_idx  = sample(nrow(nvo_cur_data), size = trunc(0.80 * nrow(nvo_cur_data)))
 nvo_trn_data = nvo_cur_data[nvo_trn_idx, ]
 nvo_tst_data = nvo_cur_data[-nvo_trn_idx, ]
@@ -348,20 +349,39 @@ evaluate_model(three_way_log_model)
 From here, we tested the assumption of this model.  Linearity and constant variance appeared to be preserved, while normality was not. (It is worth noting that normality was violated for every attempted model during this project, regardless of model simplicity or transformations used.)
 
 ```{r}
-get_model_diagnostics(three_way_log_model, plot_it = TRUE)
+get_model_diagnostics(three_way_log_model)
 ```
 
-A backwards search using Akaike Information Criterion (AIC) was then attempted. The resulting model preserved the appropriate fit of the data, but violated the constant variance assumption in addition to the normality assumption so it was not chosen.
+A backwards search using Akaike Information Criterion (AIC) was then attempted using the full three way interaction model with log transformations as the starting model, but this operation did not complete, likely due to the size of the starting model.
+
+So we could still test the impact of a backwards search, the following model with fewer total interaction parameters, that also had similar performance and diagnostic metrics, was leveraged as the starting model:
 
 ```{r}
-three_way_back_aic = step(three_way_log_model, direction = "backward", trace = 0)
-evaluate_model(three_way_back_aic)
-get_model_diagnostics(three_way_back_aic, plot_it = TRUE)
+three_way_log_model_less_interactions = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_trn_data)
+evaluate_model(three_way_log_model_less_interactions)
+get_model_diagnostics(three_way_log_model_less_interactions)
 ```
 
+```{r}
+# three_way_back_aic = step(three_way_log_model_less_interactions, direction = "backward", trace = 0)
+# evaluate_model(three_way_back_aic)
+# get_model_diagnostics(three_way_back_aic)
+```
 
-###### Removing unusual observations
+The resulting model preserved the appropriate fit of the data, but violated the constant variance assumption in addition to the normality assumption so it was not chosen.
 
+The following adjustments were also attempted:
+- Additional log transformations to numeric predictors other than the `.Gift` predictors
+- Polynomial transformations to the predictors other than the `.Gift` predictors
+- The manual removal of predictors (each was attempted)
+
+Each adjustment did not improve model performance and resulted in a violation of the constant variance assumption. log and polynomial transformations were attempted on other variables, but did not improve model performance and, typically, resulted in a violation of constant variance.
+
+_Unusual Observations_
+
+In an attempt to further improve model fit, the full three way interaction model with log transformations was re-fit three times, each time with either high leverage observations, high influence observations, or outliers removed.  This did not result an any added benefit.
+
+Functions to identify unsual observations:
 ```{r}
 # finds observations with leverage greater than 2 times the average leverage
 get_high_leverage = function(model){
@@ -379,25 +399,37 @@ get_high_influence = function(model){
 }
 ```
 
-```{r}
-cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_cur_data)
-```
-
+- Outlier removal results
 ```{r}
 # remove outliers
-new_cur_data = nvo_cur_data[-get_outliers(cur_mod), ]
-new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+new_trn_data = nvo_trn_data[-get_outliers(three_way_log_model), ]
+new_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_trn_data)
+evaluate_model(new_mod)
+get_model_diagnostics(new_mod)
+```
 
+- High leverage removal results
+```{r}
 # removed high leverage
-new_cur_data = nvo_cur_data[-get_high_leverage(cur_mod), ]
-new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+new_trn_data = nvo_trn_data[-get_high_leverage(three_way_log_model), ]
+new_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_trn_data)
+evaluate_model(new_mod)
+get_model_diagnostics(new_mod)
+```
 
+- High influence removal results
+```{r}
 # removed high influence
-new_cur_data = nvo_cur_data[-get_high_influence(cur_mod), ]
-new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+new_trn_data = nvo_trn_data[-get_high_influence(three_way_log_model), ]
+new_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_trn_data)
+evaluate_model(new_mod)
+get_model_diagnostics(new_mod)
 
 ```
 
+_Selected Model_
+
+The full three way interaction model with log transformations trained on data where unusual observations were not removed was selected.
 
 ### Results
 
