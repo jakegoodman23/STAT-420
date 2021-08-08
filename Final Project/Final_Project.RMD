@@ -1,6 +1,6 @@
 ---
-title: "Data Analysis Final Project"
-author: "STAT 420, Summer 2021, Jake Goodman (NetID: jakeg5) and Michael McClanahan (NetID: mjm31)"
+title: "Donation Prediction for Direct Marketing"
+author: "STAT 420, Summer 2021"
 date: ''
 output:
   html_document: 
@@ -20,7 +20,7 @@ opts_chunk$set(cache = TRUE, autodep = TRUE)
 
 ### Introduction
 
-According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the data set, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency.
+According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the data set, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency. 
 
 _Links to the above data sets can be found below in the [References] section._
 
@@ -152,7 +152,14 @@ Final data set for analysis (including row and column counts) after all data pre
 nvo_cur_data
 ```
 
-##### Functions
+For model training and evaluation, a 80-20 train-test split on the data was leveraged:
+```{r}
+nvo_trn_idx  = sample(nrow(nvo_cur_data), size = trunc(0.80 * nrow(nvo_cur_data)))
+nvo_trn_data = nvo_cur_data[nvo_trn_idx, ]
+nvo_tst_data = nvo_cur_data[-nvo_trn_idx, ]
+```
+
+##### Model Selection Process
 
 ```{r}
 # functions to be used throughout the document
@@ -265,6 +272,16 @@ new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + l
 
 
 ### Results
+
+### Appendix
+
+#### Group Members
+
+The following students contributed to this group project:
+
+- Jake Goodman (NetID: jakeg5)
+- Michael McClanahan (NetID: mjm31)
+
 
 ### References
 
