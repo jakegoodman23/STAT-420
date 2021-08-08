@@ -1,4 +1,7 @@
+setwd("C:/repos/STAT-420/Final Project")
+
 library(lmtest)
+library(faraway)
 
 #Calculates LOOCV RMSE for a Model
 get_loocv_rmse = function(model) {
@@ -17,12 +20,12 @@ get_high_leverage = function(model){
 
 #Finds observations with a standardized residual greater than a magnitude of 2
 get_outliers = function(model){
-  rstandard(model)[abs(rstandard(model)) > 2]
+  abs(rstandard(model)) > 2
 }
 
 #Finds observations with a cooks.distance greater than 4 / number of observations
 get_high_influcence = function(model){
-  cooks.distance(model_1) > 4 / length(cooks.distance(model))
+  cooks.distance(model) > 4 / length(cooks.distance(model))
 }
 
 #Uses Breusch-Pagan Test to validate Constant Variance assumption
@@ -107,31 +110,93 @@ nvo_cur_data = nvo_cur_data[nvo_cur_data$Time.Between.Gifts > 0, ]
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Smallest.Gift > 0, ]
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Largest.Gift > 0, ]
 
+pairs(nvo_cur_data, col = "dodgerblue")
+
 # simple models
 add_cur_model = lm(Current.Gift ~ ., data = nvo_cur_data)
 evaluate_model(add_cur_model)
 get_model_diagnostics(add_cur_model)
 
+vif(add_cur_model)
+
 two_way_cur_model = lm(Current.Gift ~ . ^ 2, data = nvo_cur_data)
 evaluate_model(two_way_cur_model)
 get_model_diagnostics(two_way_cur_model)
 
-add_log_cur_model = lm(log(Current.Gift) ~ ., data = nvo_cur_data)
-evaluate_model(add_log_cur_model)
-get_model_diagnostics(add_log_cur_model)
+three_way_cur_model = lm(Current.Gift ~ . ^ 3, data = nvo_cur_data)
+evaluate_model(three_way_cur_model)
+get_model_diagnostics(three_way_cur_model)
 
-add_log_two_way_cur_model = lm(log(Current.Gift) ~ . ^ 2, data = nvo_cur_data)
-evaluate_model(add_log_two_way_cur_model)
-get_model_diagnostics(add_log_two_way_cur_model)
+#possible transformations
+hist(nvo_data$Current.Gift,
+     xlab   = "Value",
+     main   = "Current.Gift",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)	 
+hist(nvo_cur_data$Smallest.Gift,
+     xlab   = "Value",
+     main   = "Smallest.Gift",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(nvo_cur_data$Previous.Gift,
+     xlab   = "Value",
+     main   = "Previous.Gift",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(nvo_cur_data$Age,
+     xlab   = "Value",
+     main   = "Age",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(nvo_cur_data$Number.of.Gifts,
+     xlab   = "Value",
+     main   = "Number.of.Gifts",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(nvo_cur_data$Time.Between.Gifts,
+     xlab   = "Value",
+     main   = "Time.Between.Gifts",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(nvo_cur_data$Other.Gifts,
+     xlab   = "Value",
+     main   = "Other.Gifts",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
 
-# large working models
-big_cur_mod = lm(log(Current.Gift) ~ log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + I(Age^2) + I(Age^3) + (Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts + I(Other.Gifts^2)) ^ 3, data = nvo_cur_data)
-evaluate_model(big_cur_mod)
-get_model_diagnostics(big_cur_mod, plot_it = TRUE)
+# best
+cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_cur_data)
+evaluate_model(cur_mod)
+get_model_diagnostics(cur_mod, plot_it = TRUE)
 
-smaller_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex) ^ 3 + (Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_cur_data)
-evaluate_model(smaller_cur_mod)
-get_model_diagnostics(smaller_cur_mod, plot_it = TRUE)
+# removed outliers
+new_cur_data = nvo_cur_data[-get_outliers(cur_mod), ]
+new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+evaluate_model(new_cur_mod)
+get_model_diagnostics(new_cur_mod, plot_it = TRUE)
+
+# removed high leverage
+new_cur_data = nvo_cur_data[-get_high_leverage(cur_mod), ]
+new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+evaluate_model(new_cur_mod)
+get_model_diagnostics(new_cur_mod, plot_it = TRUE)
+
+# removed high influence
+new_cur_data = nvo_cur_data[-get_high_influcence(cur_mod), ]
+new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+evaluate_model(new_cur_mod)
+get_model_diagnostics(new_cur_mod, plot_it = TRUE)
+
+cur_mod_back_aic = step(smaller_cur_mod, direction = "backward", trace = 0)
+
+
 
 # histograms of numeric variables
 
