@@ -120,7 +120,7 @@ get_outliers = function(model){
 }
 
 # finds observations with a cooks.distance greater than 4 / number of observations
-get_high_influcence = function(model){
+get_high_influence = function(model){
   cooks.distance(model) > 4 / length(cooks.distance(model))
 }
 
@@ -170,6 +170,39 @@ evaluate_model = function(model) {
 ```
 
 ##### Model Selection Process
+
+###### Progressing through different model iterations
+```{r}
+# simple additive model that includes all variables as predictors
+add_cur_model = lm(Current.Gift ~ ., data = nvo_cur_data)
+
+# includes all two-way interactions with each variable as a predictor
+two_way_cur_model = lm(Current.Gift ~ . ^ 2, data = nvo_cur_data)
+
+# maybe include histograms here??
+
+# model including a mix of three way interactions and log transformations
+cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_cur_data)
+
+# model produced from backwards selection on above model (cur_mod)
+#cur_mod_back_aic = step(cur_mod, direction = "backward", trace = 0)
+```
+
+###### Removing unusual observations
+```{r}
+# remove outliers
+new_cur_data = nvo_cur_data[-get_outliers(cur_mod), ]
+new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+
+# removed high leverage
+new_cur_data = nvo_cur_data[-get_high_leverage(cur_mod), ]
+new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+
+# removed high influence
+new_cur_data = nvo_cur_data[-get_high_influence(cur_mod), ]
+new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_cur_data)
+
+```
 
 
 ### Results
