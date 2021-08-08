@@ -1,34 +1,32 @@
 ---
-title: "Data Analysis Project Report"
+title: "Donation Prediction for Direct Marketing"
+author: "STAT 420, Summer 2021"
+date: ''
 output:
   html_document: 
     theme: readable
     toc: yes
   pdf_document: default
 urlcolor: cyan
-#bibliography: bibliography.bib
+bibliography: bibliography.bib
 ---
 ***
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
-library(knitr)
 options(scipen = 1, digits = 4, width = 80, fig.align = "center")
+library(knitr)
 opts_chunk$set(cache = TRUE, autodep = TRUE)
 ```
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
-# load libraries to be used throughout the document
-library(lmtest)
-library(faraway)
-```
-
-
-
 ### Introduction
 
-According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the dataset, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency.
+According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the data set, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency. 
 
+_Links to the above data sets can be found below in the [References] section._
 
+#### Data Set Background Information
+
+The data file for this project was obtained from the @statlib.  The file contains data sampled from a much larger data set from the 1998 KDD Cup, an annual data science competition put on by the Association for Computing Machinery's @kdd_data. For the competition, a data set containing 95412 observations and 481 variables was provided. Likely to aid in ease of analysis, the DSAL generated a sample of the same data set, which we will use for this analysis, that contains 7600 observations with 19 variables for each observation. As was the case during the 1998 KDD Cup, each de-identified observation in the data set contains information for someone that previously donated to a Congressionally-chartered US veterans' service organization or one of its affiliates. At the time, this national veterans' agency represented the special interests of paralyzed veterans and their families and obtained most of its funding from charitable donations.
 
 ### Methods
 
@@ -54,20 +52,65 @@ According to the @nccs, as of 2016, over 1.54 million nonprofit organizations we
     - `Num.Children`: the number of children, if any, that the donor has
     - `Total.Wealth`: a wealth rating from 0-9 (with 9 being the wealthiest) that is based on median family income and population statistics
     - `Sex`: the gender of the donor
-    - `Number.of.Gifts`: the number of donations made
+    - `Number.of.Gifts`: the number of donations made to this organization
+    - `Other.Gifts`: number of times the donor has responded to a mail order donation offer for other affiliated organizations    
     - `Time.Between.Gifts`: the avg number of months between donations
     - `Largest.Gift`: the largest donation made (in dollars)
     - `Smallest.Gift`: the smallest donation made (in dollars)
-    - `Other.Gifts`: number of times the donor has responded to a mail order donation offer
-    - `Average.Gift`: the avg donation amount (in dollars) from a donor 
+    - `Previous.Gift`: the amount of the donor's previous donation (in dollars)
+    - `Average.Gift` (not used): the avg donation amount (in dollars) from a donor 
 
 
 ##### Data Preparation
 
+The following libraries were first loaded as they were used throughout the analysis.
+```{r, message = FALSE, warning = FALSE}
+
+# A dependency for bptest()
+library(lmtest)
+
+# Used to obtain variance inflation factors
+library(faraway)
+
+# Used for a pretty-print of our data
+library(tibble)
+```
+
+Data was loaded from `nvo.txt`.
 ```{r}
 nvo_data = read.table("nvo.txt", sep = "\t",header = TRUE, fileEncoding = "UTF-8")
+nvo_data = as_tibble(nvo_data)
+nvo_data
+```
 
-# remove unnecessary columns from data to make model selection easier later on
+Once the data was loaded, the following categorical variables were first coerced as factors:
+
+- `Sex`
+- `Own.Home.`
+- `Total.Wealth`
+
+```{r}
+nvo_data$Sex = as.factor(nvo_data$Sex)
+head(nvo_data$Sex)
+```
+
+```{r}
+nvo_data$Own.Home. = as.factor(nvo_data$Own.Home.)
+head(nvo_data$Own.Home.)
+```
+
+```{r}
+nvo_data$Total.Wealth = as.factor(nvo_data$Total.Wealth)
+head(nvo_data$Total.Wealth)
+```
+
+Then unnecessary variables were removed:
+
+- This data set included `sqrt()` transformed values of all `.Gift` variables that were not needed.
+- The `Average.Gift` variable was excluded to avoid collinearity issues. `Average.Gift` is technically a function of the desired response (`Current.Gift`) and other valuable `.Gift` predictors (`Largest.Gift`, `Smallest.Gift`, and `Previous.Gift`) in that these other values are required to calculate the average gift amount for the donor.
+- `Income` was removed for collinearity issues as well since (likely) the `Total.Wealth` variable is a function of `Income` and other factors.
+
+```{r}
 nvo_cur_data = subset(nvo_data, select = -c(
 	Average.Gift
 	,Income
@@ -77,41 +120,263 @@ nvo_cur_data = subset(nvo_data, select = -c(
 	,Sqrt.Previous.Gift
 	,Sqrt.Average.Gift)
 	)
-
-# coerce categorical variables into a factor
-nvo_data$Sex = as.factor(nvo_data$Sex)
-nvo_data$Own.Home. = as.factor(nvo_data$Own.Home.)
-nvo_data$Total.Wealth = as.factor(nvo_data$Total.Wealth)
-
-# we are only interested in predicting size of gifts received, not gifts not received
-nvo_cur_data = nvo_cur_data[nvo_cur_data$Current.Gift > 0, ]
-
-# this being 0 doesn't make sense. 0 time between 2 gifts should just be 1 larger gift
-nvo_cur_data = nvo_cur_data[nvo_cur_data$Time.Between.Gifts > 0, ]
-
-# people should only be in the dataset if they have contributed before
-# their smallest and largest gifts would be > 0 logically
-nvo_cur_data = nvo_cur_data[nvo_cur_data$Smallest.Gift > 0, ]
-nvo_cur_data = nvo_cur_data[nvo_cur_data$Largest.Gift > 0, ]
-
+nvo_cur_data
 ```
 
-##### Functions
+Finally, observations that did not make logical sense were removed for this analysis.
 
+Because we were interested in predicting the size of a donor's current gift and not whether or not a donor sent a donation, records where the `Current.Gift` = \$0 were removed. This removed 2,808 of the 7,600 observations.
 ```{r}
-# functions to be used throughout the document
+length(nvo_cur_data[nvo_cur_data$Current.Gift == 0, ]$Current.Gift)
+nvo_cur_data = nvo_cur_data[nvo_cur_data$Current.Gift > 0, ]
+```
 
-# calculates LOOCV RMSE for a Model
+A few additional records with a `Smallest.Gift` value of \$0 and/or a `Largest.Gift` value of \$0 were removed because, logically, these didn't make complete sense based on our assumptions about the data set. Namely, in order to be included in the data set, a donor had to have donated to the organization previously, which would require _some_ donation > 0, which would require both their smallest and largest donation to be greater than \$0.  Even if they donated \$0.01 once, both `Smallest.Gift` and `Largest.Gift` would be greater than 0 with a value of \$0.01.
+
+31 observations with `Smallest.Gift` = 0 were removed:
+```{r}
+length(nvo_cur_data[nvo_cur_data$Smallest.Gift  == 0, ]$Smallest.Gift)
+nvo_cur_data = nvo_cur_data[nvo_cur_data$Smallest.Gift > 0, ]
+```
+After the steps above, there weren't any remaining observations with `Largest.Gift` = \$0:
+```{r}
+length(nvo_cur_data[nvo_cur_data$Largest.Gift  == 0, ]$Largest.Gift)
+```
+It is also worth noting that observations with a `Previous.Gift` value of \$0 also would not make logical sense.  If the last gift amount was \$0 then it shouldn't be counted as a donation. Again, if someone donated \$0.01 once, both `Previous.Gift` would be greater than 0 with a value of \$0.01. However, after the steps above, there weren't any remaining observations with `Previous.Gift` = \$0:
+```{r}
+length(nvo_cur_data[nvo_cur_data$Previous.Gift == 0, ]$Previous.Gift)
+```
+
+Final data set for analysis (including row and column counts) after all data preparation steps:
+```{r}
+nvo_cur_data
+```
+
+For model training and evaluation, a 80-20 train-test split on the data was leveraged:
+```{r}
+nvo_trn_idx  = sample(nrow(nvo_cur_data), size = trunc(0.80 * nrow(nvo_cur_data)))
+nvo_trn_data = nvo_cur_data[nvo_trn_idx, ]
+nvo_tst_data = nvo_cur_data[-nvo_trn_idx, ]
+```
+
+Once the training data was loaded, a pairs plot was quickly observed to check for any blatant collinearity issues between predictors. None were observed.
+```{r eval = TRUE, echo = FALSE, fig.align='center', out.width= "95%", fig.height=7}
+pairs(nvo_trn_data, col = "dodgerblue")
+```
+
+
+##### Model Selection Process
+
+The main goal of this project was to select the best model for predicting `Current.Gift` using this data set, without overfitting. To that effect, although model size and assumption violation was a factor during the model selection process, it was not prioritized over prediction power.
+
+
+_Functions for Model Evaluation_
+
+During model selection, adjusted $R^2$ and leave-one-out cross-validated root mean squared error (LOOCV RMSE) were used to assess quality of fit.  LOOCV RMSE was also used to determine if each model was overfitting to the training data.
+
+The following function was used to return a model's LOOCV RMSE:
+```{r}
 get_loocv_rmse = function(model) {
   sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
 }
+```
 
-# calculates Adjusted R Squared Value for a Model
+The following function was used to return a model's RMSE:
+
+```{r}
+# calculate rmse by hand
+
+get_rmse = function(fit, data, expo = FALSE){
+  if(expo == TRUE){
+    fit = exp(fit)
+  }
+  sqrt(mean((data$Current.Gift - fit)^2))
+}
+```
+
+
+The following function was used to return a model's adjusted $R^2$:
+```{r}
 get_adj_r2 = function(model) {
   summary(model)$adj.r.squared
 }
+```
+
+The following function was used to quickly evaluate the model by using the above functions to display LOOCV RMSE and adjusted $R^2$:
+```{r}
+# returns LOOCV_RMSE and Adj. R-Squared values
+evaluate_model = function(model) {
+	res = c("LOOCV_RMSE" = get_loocv_rmse(model),"Adj. R-squared" = get_adj_r2(model)) 
+	res
+}
+```
+
+_Functions for Model Diagnostics_
+
+During the model selection process, the following function was used to return the p-value of the Breusch-Pagan Test (BP Test) to test the model's adherence to the constant variance assumption:
+```{r}
+get_bp_p_value = function(model) {
+  unname(bptest(model)$p.value)
+}
+```
+
+During the model selection process, the following function was used to return the p-value of the Shapiro-Wilk Test (SW Test) to test the model's adherence to the normality of errors assumption:
+```{r}
+get_sw_p_value = function(model) {
+  #this test fails if there are more than 5000 residuals in the model
+  #if this is the case...
+	if (length(resid(model)) > 5000) {
+	  #...grab a random sample of 5000 and feed that to the test
+		p_val = shapiro.test(sample(resid(model),5000))$p.value
+	} else {
+	  #otherwise use everything
+		p_val = shapiro.test(resid(model))$p.value
+	}
+	unname(p_val)
+}
+```
+
+In addition to the above tests, a fitted versus residuals plot was used to test the model's adherence to the linearity and constant variance assumptions. A Q-Q plot was also used to test the model's adherence to the normality assumption.  The following function was used to show both plots in one row:
+```{r}
+# returns fitted versus residuals and Q-Q plots
+diagnostic_plots = function(model, pcol = "grey", lcol = "dodgerblue") {
+
+	par(mfrow=c(1,2))
+	# A fitted versus residuals plot
+	plot(fitted(model), resid(model), col = pcol, pch = 20,
+		xlab = "Fitted", ylab = "Residuals", main = "Fitted vs Residuals Plot")
+	abline(h = 0, col = lcol, lwd = 2)
+	# A Normal Q-Q plot
+	qqnorm(resid(model), main = "Normal Q-Q Plot", col = pcol)
+	qqline(resid(model), col = lcol, lwd = 2)
+
+}
+```
+
+For more efficient model assumption evaluation, the following function was defined that prints BP and SW Test p-values and, optionally, a fitted versus residuals plot and Q-Q plot:
+```{r}
+# returns p-values of Breusch-Pagan and Shapiro-Wilkes tests 
+get_model_diagnostics = function(model, pcol = "grey", lcol = "dodgerblue", plot_it = FALSE) {
+	if (plot_it == TRUE) {
+		diagnostic_plots(model, pcol, lcol)
+	}
+	res = c("BP Test P-Value" = get_bp_p_value(model),"SW Test P-Value" = get_sw_p_value(model)) 
+	res
+}
+
+```
 
 
+_Model Selection_
+
+First, a simple additive model with all available predictors was fit to the training data, but it's adjusted $R^2$ was lower than desired, indicating that it was underfitting to the training data.
+```{r}
+add_cur_model = lm(Current.Gift ~ ., data = nvo_trn_data)
+evaluate_model(add_cur_model)
+```
+
+Before testing additional models, variance inflation factors were obtained for the available predictors in the data set.  From these values, we confirmed that there did not appear to be collinearity issues with the data:
+```{r}
+vif(add_cur_model)
+```
+
+Next, because the previous model with all predictors showed to be underfitting, we tested two-way and three-way interaction models using all predictors. For each model, we saw improvements in adjusted $R^2$, indicating that the added complexity in the model was resulting in a better fit, but the full three-way interaction model's LOOCV RMSE started to increase, indicating that this model was overfitting to the training data.
+
+Two-way interaction model using all predictors:
+```{r}
+two_way_cur_model = lm(Current.Gift ~ . ^ 2, data = nvo_trn_data)
+evaluate_model(two_way_cur_model)
+```
+
+Three-way interaction model using all predictors:
+```{r}
+three_way_cur_model = lm(Current.Gift ~ . ^ 3, data = nvo_trn_data)
+evaluate_model(three_way_cur_model)
+```
+
+
+Since the model was starting to overfit, interaction terms were capped at 3 and we turned our attention to performing transformations to better model our dataset.
+
+To do this, histograms of numeric variables were observed. For all `.Gift` variables, extreme donation amounts were noted. Log transformations of these variables' values seemed to help transform their distributions to be more normal, helping to model the data linearly.
+
+```{r eval = TRUE, fig.align='center', out.width= "95%", fig.height=8 }
+# organize the histograms into a 4x2 figure
+par(mfrow=c(4,2))
+hist(nvo_cur_data$Current.Gift,
+     xlab   = "Value",
+     main   = "Current.Gift",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(log(nvo_cur_data$Current.Gift),
+     xlab   = "Value",
+     main   = "log(Current.Gift)",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)	 	 
+hist(nvo_cur_data$Smallest.Gift,
+     xlab   = "Value",
+     main   = "Smallest.Gift",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(log(nvo_cur_data$Smallest.Gift),
+     xlab   = "Value",
+     main   = "log(Smallest.Gift)",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)	 
+hist(nvo_cur_data$Largest.Gift,
+     xlab   = "Value",
+     main   = "Largest.Gift",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(log(nvo_cur_data$Largest.Gift),
+     xlab   = "Value",
+     main   = "log(Largest.Gift)",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)	  
+hist(nvo_cur_data$Previous.Gift,
+     xlab   = "Value",
+     main   = "Previous.Gift",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+hist(log(nvo_cur_data$Previous.Gift),
+     xlab   = "Value",
+     main   = "log(Previous.Gift)",
+     col    = "darkorange",
+     border = "dodgerblue",
+     breaks = 50)
+```
+
+When these log transformations were introduced into the three-way interaction model with all available predictors, we saw a significant improvement in LOOCV RMSE and adjusted $R^2$ was maintained.
+
+```{r}
+three_way_log_model = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_trn_data)
+evaluate_model(three_way_log_model)
+```
+
+From here, we tested the assumption of this model.  Linearity and constant variance appeared to be preserved, while normality was not. (It is worth noting that normality was violated for every attempted model during this project, regardless of model simplicity or transformations used.)
+
+```{r}
+get_model_diagnostics(three_way_log_model, plot_it = TRUE)
+```
+
+A backwards search using Akaike Information Criterion (AIC) was then attempted. The resulting model preserved the appropriate fit of the data, but violated the constant variance assumption in addition to the normality assumption so it was not chosen.
+
+```{r}
+#three_way_back_aic = step(three_way_log_model, direction = "backward", trace = 0)
+#evaluate_model(three_way_back_aic)
+#get_model_diagnostics(three_way_back_aic, plot_it = TRUE)
+```
+
+
+###### Removing unusual observations
+
+```{r}
 # finds observations with leverage greater than 2 times the average leverage
 get_high_leverage = function(model){
   hatvalues(model) > 2 * mean(hatvalues(model))
@@ -126,73 +391,12 @@ get_outliers = function(model){
 get_high_influence = function(model){
   cooks.distance(model) > 4 / length(cooks.distance(model))
 }
-
-# uses Breusch-Pagan Test to validate Constant Variance assumption
-get_bp_p_value = function(model) {
-  unname(bptest(model)$p.value)
-}
-
-# uses Shapiro-Wilkes Test to validate Normality Assumption
-get_sw_p_value = function(model) {
-	if (length(resid(model)) > 5000) {
-		p_val = shapiro.test(sample(resid(model),5000))$p.value
-	} else {
-		p_val = shapiro.test(resid(model))$p.value
-	}
-	unname(p_val)
-}
-
-# returns fitted versus residuals and Q-Q plots
-diagnostic_plots = function(model, pcol = "grey", lcol = "dodgerblue") {
-
-	par(mfrow=c(1,2))
-	# A fitted versus residuals plot
-	plot(fitted(model), resid(model), col = pcol, pch = 20,
-		xlab = "Fitted", ylab = "Residuals", main = "Fitted vs Residuals Plot", sub = "(a)")
-	abline(h = 0, col = lcol, lwd = 2)
-	# A Normal Q-Q plot
-	qqnorm(resid(model), main = "Normal Q-Q Plot", sub = "(b)", col = pcol)
-	qqline(resid(model), col = lcol, lwd = 2)
-
-}
-
-# returns p-values of Breusch-Pagan and Shapiro-Wilkes tests 
-get_model_diagnostics = function(model, pcol = "grey", lcol = "dodgerblue", plot_it = FALSE) {
-	if (plot_it == TRUE) {
-		diagnostic_plots(model, pcol, lcol)
-	}
-	res = c("BP Test P-Value" = get_bp_p_value(model),"SW Test P-Value" = get_sw_p_value(model)) 
-	res
-}
-
-# returns LOOCV_RMSE and Adj. R-Squared values
-evaluate_model = function(model) {
-	res = c("LOOCV_RMSE" = get_loocv_rmse(model),"Adj. R-squared" = get_adj_r2(model), "AIC Value" = AIC(model), "# of Predictors" = length(coef(model)) - 1)
-	res
-}
 ```
 
-##### Model Selection Process
-
-###### Progressing through different model iterations
 ```{r}
-# simple additive model that includes all variables as predictors
-add_cur_model = lm(Current.Gift ~ ., data = nvo_cur_data)
-
-# includes all two-way interactions with each variable as a predictor
-two_way_cur_model = lm(Current.Gift ~ . ^ 2, data = nvo_cur_data)
-
-# model including a mix of two way interactions and log transformations
-cur_mod_two = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 2 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 2, data = nvo_cur_data)
-
-# model including a mix of three way interactions and log transformations
-cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_cur_data)
-
-# model produced from backwards selection on above model (cur_mod)
-cur_mod_back_aic = step(cur_mod, direction = "backward", trace = 0)
+cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_cur_data)
 ```
 
-###### Removing unusual observations
 ```{r}
 # remove outliers
 new_cur_data = nvo_cur_data[-get_outliers(cur_mod), ]
@@ -209,218 +413,7 @@ new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + l
 ```
 
 
-
 ### Results
-
-
-##### Additive Model 
-`lm(Current.Gift ~ ., data = nvo_cur_data)`
-
-###### Model Quality
-```{r, echo = FALSE}
-evaluate_model(add_cur_model)
-```
-
-###### Model Diagnostics 
-```{r, echo = FALSE}
-get_model_diagnostics(add_cur_model)
-diagnostic_plots(add_cur_model)
-```
- 
- <font size="1"> **Fig. 1.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. We observe that neither assumption to be valid with this model. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot. We observe that this model also violates the normality assumption based on its Q-Q plot.</font>
-
-
-##### Two-Way Interaction Model
-`lm(Current.Gift ~ . ^ 2, data = nvo_cur_data)`
-
-###### Model Quality
-```{r, echo = FALSE}
-evaluate_model(two_way_cur_model)
-```
-
-###### Model Diagnostics 
-```{r, echo = FALSE}
-get_model_diagnostics(two_way_cur_model)
-diagnostic_plots(two_way_cur_model)
-```
-
-
- <font size="1"> **Fig. 2.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. We observe that neither assumption to be valid with this model. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot. We observe that this model also violates the normality assumption based on its Q-Q plot.</font>
- 
-##### `Current.Gift` Histogram Comparison
-
-```{r,echo = FALSE}
-par(mfrow=c(1,2))
-hist(nvo_data$Current.Gift,
-     xlab   = "Value",
-     main   = "Current.Gift",
-     sub    = "(a)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 50)	 
-
-hist(log(nvo_data$Current.Gift),
-     xlab   = "Value",
-     main   = "Current.Gift (logarithmic)",
-     sub    = "(b)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 10)	 
-
-```
-
- <font size="1"> **Fig. 3.** (A): A histogram for the values of `Current.Gift`. (B): A histogram for the values of `Current.Gift` that have been log transformed.</font>
- 
-##### `Smallest.Gift` Histogram Comparison
-
-```{r,echo = FALSE}
-par(mfrow=c(1,2))
-hist(nvo_data$Smallest.Gift,
-     xlab   = "Value",
-     main   = "Smallest.Gift",
-     sub    = "(a)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 50)	 
-
-hist(log(nvo_data$Smallest.Gift),
-     xlab   = "Value",
-     main   = "Smallest.Gift (logarithmic)",
-     sub    = "(b)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 10)	 
-
-```
-
- <font size="1"> **Fig. 4.** (A): A histogram for the values of `Smallest.Gift`. (B): A histogram for the values of `Smallest.Gift` that have been log transformed.</font>
-
-##### `Largest.Gift` Histogram Comparison
-
-```{r,echo = FALSE}
-par(mfrow=c(1,2))
-hist(nvo_data$Largest.Gift,
-     xlab   = "Value",
-     main   = "Largest.Gift",
-     sub    = "(a)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 50)	 
-
-hist(log(nvo_data$Largest.Gift),
-     xlab   = "Value",
-     main   = "Largest.Gift (logarithmic)",
-     sub    = "(b)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 10)	 
-
-```
-
- <font size="1"> **Fig. 4.** (A): A histogram for the values of `Smallest.Gift`. (B): A histogram for the values of `Smallest.Gift` that have been log transformed.</font>
- 
-##### `Previous.Gift` Histogram Comparison
-
-```{r,echo = FALSE}
-par(mfrow=c(1,2))
-hist(nvo_data$Previous.Gift,
-     xlab   = "Value",
-     main   = "Previous.Gift",
-     sub    = "(a)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 50)
-
-hist(log(nvo_data$Previous.Gift),
-     xlab   = "Value",
-     main   = "Previous.Gift (logarithmic)",
-     sub    = "(b)",
-     col    = "darkorange",
-     border = "dodgerblue",
-     breaks = 10)	 
-
-```
-
- <font size="1"> **Fig. 5** (A): A histogram for the values of `Previous.Gift`. (B): A histogram for the values of `Previous.Gift` that have been log transformed.</font>
- 
-##### Two-Way Interaction & Log Transformation Model
-`lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 2 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 2, data = nvo_cur_data)`
-
-
-###### Model Quality
-```{r, echo = FALSE}
-evaluate_model(cur_mod_two)
-
-```
-
-###### Model Diagnostics
-```{r, echo = FALSE}
-get_model_diagnostics(cur_mod_two)
-diagnostic_plots(cur_mod_two)
-
-```
-
- <font size="1"> **Fig. 6.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. We observe that neither assumption to be valid with this model. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot. We observe that this model also violates the normality assumption based on its Q-Q plot.</font>
- 
-#### Three-Way Interaction & Log Transformation Model
-`lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_cur_data)`
-
-###### Model Quality
-```{r, echo = FALSE}
-evaluate_model(cur_mod)
-
-```
-
-###### Model Diagonistics
-```{r, echo = FALSE}
-get_model_diagnostics(cur_mod)
-diagnostic_plots(cur_mod)
-
-```
-
- <font size="1"> **Fig. 7.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. We observe that the Constant Variance assumption appears to be valid here. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot. We observe that this model also violates the normality assumption based on its Q-Q plot.</font>
- 
-##### Backwards Selection on Three-Way/Log Model
-
-###### Model Quality
-```{r, echo = FALSE}
-evaluate_model(cur_mod_back_aic)
-```
-
-###### Model Diagonistics
-```{r, echo = FALSE}
-get_model_diagnostics(cur_mod_back_aic)
-diagnostic_plots(cur_mod_back_aic)
-```
-
- <font size="1"> **Fig. 8.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. We observe that the Constant Variance assumption appears to be valid here. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot. We observe that this model also violates the normality assumption based on its Q-Q plot.</font>
-
-```{r, echo = FALSE}
-bp_vals = c(get_bp_p_value(add_cur_model)
-            ,get_bp_p_value(two_way_cur_model)
-            #,get_bp_p_value(smaller_cur_mod_two)
-            ,get_bp_p_value(cur_mod))
-            #,get_bp_p_value(small_cur_mod_back_aic))
-
-rsq_vals = c(get_adj_r2(add_cur_model)
-             ,get_adj_r2(two_way_cur_model)
-             #,get_adj_r2(smaller_cur_mod_two)
-             ,get_adj_r2(cur_mod))
-             #,get_adj_r2(small_cur_mod_back_aic))
-
-rmse_vals = c(get_loocv_rmse(add_cur_model)
-              ,get_loocv_rmse(two_way_cur_model)
-              #,get_loocv_rmse(smaller_cur_mod_two)
-              ,get_loocv_rmse(cur_mod))
-              #,get_loocv_rmse(small_cur_mod_back_aic))
-
-model_name = c("additive_model", "small_two_way_model"
-               ,"large_three_way_model","three_way_model_selected")
-#model_comp = cbind(model_name,bp_vals, rsq_vals, rmse_vals)
-
-#kable(model_comp,digits = 3)
-```
-
 
 ### Discussion
 
@@ -430,4 +423,40 @@ When trying to select the model based on the provided data, a lot of different m
 
 Throughout the model selection process, different criterion were used along the way to evaluate the model quality as well as the model assumptions. For model quality, LOOCV_RMSE and Adj. R-squared were used. For model assumptions, fitted versus residuals plot, QQ-plot, Breusch-Pagan, and Shapiro-Wilkes test were used.
 
-As seen in Figure X, there are some notable differences in model quality and model assumption values between our selected model and the others
+As seen in Figure X, there are some notable differences in model quality and model assumption values between our selected model and the others. 
+
+For the model quality values...
+
+When looking at the Adj. R-squared value...
+
+When looking at the LOOCV_RMSE value... 
+
+When looking at the AIC value...
+
+For the model assumption value...
+
+When looking at the Breusch-Pagan value...
+
+All failing the Shapiro-Wilkes test...
+
+Mention the fitted versus residuals and qq-plot for the model selected
+
+Reference train versus test data for the model being selected
+
+
+With the final model that was selected, the complexity might limit easy, actionable insights, but it should provide some clarity on what variables from this dataset might be most closely related to `Current.Gift`.  
+
+### Appendix
+
+#### Group Members
+
+The following students contributed to this group project:
+
+- Jake Goodman (NetID: jakeg5)
+- Michael McClanahan (NetID: mjm31)
+
+
+### References
+
+
+***
