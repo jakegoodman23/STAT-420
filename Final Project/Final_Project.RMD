@@ -1,32 +1,32 @@
 ---
-title: "Data Analysis Project Report"
+title: "Data Analysis Final Project"
+author: "STAT 420, Summer 2021, Jake Goodman (NetID: jakeg5) and Michael McClanahan (NetID: mjm31)"
+date: ''
 output:
   html_document: 
     theme: readable
     toc: yes
   pdf_document: default
 urlcolor: cyan
-#bibliography: bibliography.bib
+bibliography: bibliography.bib
 ---
 ***
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 options(scipen = 1, digits = 4, width = 80, fig.align = "center")
+library(knitr)
+opts_chunk$set(cache = TRUE, autodep = TRUE)
 ```
-
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
-# load libraries to be used throughout the document
-library(lmtest)
-library(faraway)
-```
-
-
 
 ### Introduction
 
-According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the dataset, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency.
+According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the data set, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency.
 
+_Links to the above data sets can be found below in the [References] section._
 
+#### Data Set Background Information
+
+The data file for this project was obtained from the @statlib.  The file contains data sampled from a much larger data set from the 1998 KDD Cup, an annual data science competition put on by the Association for Computing Machinery's @kdd_data. For the competition, a data set containing 95412 observations and 481 variables was provided. Likely to aid in ease of analysis, the DSAL generated a sample of the same data set, which we will use for this analysis, that contains 7600 observations with 19 variables for each observation. As was the case during the 1998 KDD Cup, each de-identified observation in the data set contains information for someone that previously donated to a Congressionally-chartered US veterans' service organization or one of its affiliates. At the time, this national veterans' agency represented the special interests of paralyzed veterans and their families and obtained most of its funding from charitable donations.
 
 ### Methods
 
@@ -52,20 +52,65 @@ According to the @nccs, as of 2016, over 1.54 million nonprofit organizations we
     - `Num.Children`: the number of children, if any, that the donor has
     - `Total.Wealth`: a wealth rating from 0-9 (with 9 being the wealthiest) that is based on median family income and population statistics
     - `Sex`: the gender of the donor
-    - `Number.of.Gifts`: the number of donations made
+    - `Number.of.Gifts`: the number of donations made to this organization
+    - `Other.Gifts`: number of times the donor has responded to a mail order donation offer for other affiliated organizations    
     - `Time.Between.Gifts`: the avg number of months between donations
     - `Largest.Gift`: the largest donation made (in dollars)
     - `Smallest.Gift`: the smallest donation made (in dollars)
-    - `Other.Gifts`: number of times the donor has responded to a mail order donation offer
-    - `Average.Gift`: the avg donation amount (in dollars) from a donor 
+    - `Previous.Gift`: the amount of the donor's previous donation (in dollars)
+    - `Average.Gift` (not used): the avg donation amount (in dollars) from a donor 
 
 
 ##### Data Preparation
 
+The following libraries were first loaded as they were used throughout the analysis.
+```{r, message = FALSE, warning = FALSE}
+
+# A dependency for bptest()
+library(lmtest)
+
+# Used to obtain variance inflation factors
+library(faraway)
+
+# Used for a pretty-print of our data
+library(tibble)
+```
+
+Data was loaded from `nvo.txt`.
 ```{r}
 nvo_data = read.table("nvo.txt", sep = "\t",header = TRUE, fileEncoding = "UTF-8")
+nvo_data = as_tibble(nvo_data)
+nvo_data
+```
 
-# remove unnecessary columns from data to make model selection easier later on
+Once the data was loaded, the following categorical variables were first coerced as factors:
+
+- `Sex`
+- `Own.Home.`
+- `Total.Wealth`
+
+```{r}
+nvo_data$Sex = as.factor(nvo_data$Sex)
+head(nvo_data$Sex)
+```
+
+```{r}
+nvo_data$Own.Home. = as.factor(nvo_data$Own.Home.)
+head(nvo_data$Own.Home.)
+```
+
+```{r}
+nvo_data$Total.Wealth = as.factor(nvo_data$Total.Wealth)
+head(nvo_data$Total.Wealth)
+```
+
+Then unnecessary variables were removed:
+
+- This data set included `sqrt()` transformed values of all `.Gift` variables that were not needed.
+- The `Average.Gift` variable was excluded to avoid collinearity issues. `Average.Gift` is technically a function of the desired response (`Current.Gift`) and other valuable `.Gift` predictors (`Largest.Gift`, `Smallest.Gift`, and `Previous.Gift`) in that these other values are required to calculate the average gift amount for the donor.
+- `Income` was removed for collinearity issues as well since (likely) the `Total.Wealth` variable is a function of `Income` and other factors.
+
+```{r}
 nvo_cur_data = subset(nvo_data, select = -c(
 	Average.Gift
 	,Income
@@ -75,22 +120,36 @@ nvo_cur_data = subset(nvo_data, select = -c(
 	,Sqrt.Previous.Gift
 	,Sqrt.Average.Gift)
 	)
+nvo_cur_data
+```
 
-# coerce categorical variables into a factor
-nvo_data$Sex = as.factor(nvo_data$Sex)
-nvo_data$Own.Home. = as.factor(nvo_data$Own.Home.)
-nvo_data$Total.Wealth = as.factor(nvo_data$Total.Wealth)
+Finally, observations that did not make logical sense were removed for this analysis.
 
-# we are only interested in predicting size of gifts received, not gifts not received
+Because we were interested in predicting the size of a donor's current gift and not whether or not a donor sent a donation, records where the `Current.Gift` = \$0 were removed. This removed 2,808 of the 7,600 observations.
+```{r}
+length(nvo_cur_data[nvo_cur_data$Current.Gift == 0, ]$Current.Gift)
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Current.Gift > 0, ]
+```
 
-# this being 0 doesn't make sense. 0 time between 2 gifts should just be 1 larger gift
-nvo_cur_data = nvo_cur_data[nvo_cur_data$Time.Between.Gifts > 0, ]
+A few additional records with a `Smallest.Gift` value of \$0 and/or a `Largest.Gift` value of \$0 were removed because, logically, these didn't make complete sense based on our assumptions about the data set. Namely, in order to be included in the data set, a donor had to have donated to the organization previously, which would require _some_ donation > 0, which would require both their smallest and largest donation to be greater than \$0.  Even if they donated \$0.01 once, both `Smallest.Gift` and `Largest.Gift` would be greater than 0 with a value of \$0.01.
 
-# people should only be in the dataset if they have contributed before
-# their smallest and largest gifts would be > 0 logically
+31 observations with `Smallest.Gift` = 0 were removed:
+```{r}
+length(nvo_cur_data[nvo_cur_data$Smallest.Gift  == 0, ]$Smallest.Gift)
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Smallest.Gift > 0, ]
-nvo_cur_data = nvo_cur_data[nvo_cur_data$Largest.Gift > 0, ]
+```
+After the steps above, there weren't any remaining observations with `Largest.Gift` = \$0:
+```{r}
+length(nvo_cur_data[nvo_cur_data$Largest.Gift  == 0, ]$Largest.Gift)
+```
+It is also worth noting that observations with a `Previous.Gift` value of \$0 also would not make logical sense.  If the last gift amount was \$0 then it shouldn't be counted as a donation. Again, if someone donated \$0.01 once, both `Previous.Gift` would be greater than 0 with a value of \$0.01. However, after the steps above, there weren't any remaining observations with `Previous.Gift` = \$0:
+```{r}
+length(nvo_cur_data[nvo_cur_data$Previous.Gift == 0, ]$Previous.Gift)
+```
+
+Final data set for analysis (including row and column counts) after all data preparation steps:
+```{r}
+nvo_cur_data
 ```
 
 ##### Functions
@@ -207,3 +266,7 @@ new_cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + l
 
 ### Results
 
+### References
+
+
+***
