@@ -14,7 +14,7 @@ urlcolor: cyan
 options(scipen = 1, digits = 4, width = 80, fig.align = "center")
 ```
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # load libraries to be used throughout the document
 library(lmtest)
 library(faraway)
@@ -171,6 +171,8 @@ evaluate_model = function(model) {
 }
 ```
 
+##### Model Selection Process
 
 
+### Results
 
