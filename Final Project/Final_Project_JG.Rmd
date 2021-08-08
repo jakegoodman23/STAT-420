@@ -431,3 +431,6 @@ When trying to select the model based on the provided data, a lot of different m
 Throughout the model selection process, different criterion were used along the way to evaluate the model quality as well as the model assumptions. For model quality, LOOCV_RMSE and Adj. R-squared were used. For model assumptions, fitted versus residuals plot, QQ-plot, Breusch-Pagan, and Shapiro-Wilkes test were used.
 
 As seen in Figure X, there are some notable differences in model quality and model assumption values between our selected model and the others
+
+
+
