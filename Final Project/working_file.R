@@ -110,6 +110,15 @@ nvo_cur_data = nvo_cur_data[nvo_cur_data$Time.Between.Gifts > 0, ]
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Smallest.Gift > 0, ]
 nvo_cur_data = nvo_cur_data[nvo_cur_data$Largest.Gift > 0, ]
 
+
+nvo_trn_idx  = sample(nrow(nvo_cur_data), size = trunc(0.80 * nrow(nvo_cur_data)))
+nvo_trn_data = nvo_cur_data[nvo_trn_idx, ]
+nvo_tst_data = nvo_cur_data[-nvo_trn_idx, ]
+
+cur_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift)) ^ 3 + (Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_trn_data)
+evaluate_model(cur_mod)
+get_model_diagnostics(cur_mod, plot_it = TRUE)
+
 pairs(nvo_cur_data, col = "dodgerblue")
 
 # simple models
@@ -195,3 +204,5 @@ evaluate_model(new_cur_mod)
 get_model_diagnostics(new_cur_mod, plot_it = TRUE)
 
 cur_mod_back_aic = step(smaller_cur_mod, direction = "backward", trace = 0)
+
+
