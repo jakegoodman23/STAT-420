@@ -73,6 +73,7 @@ nvo_data_mod = subset(nvo_data, select = -c(Sqrt.Smallest.Gift,Sqrt.Largest.Gift
 ##### Functions
 Functions to be used later on to track model performance
 ```{r}
+library(lmtest)
 
 #Calculates LOOCV RMSE for a Model
 get_loocv_rmse = function(model) {
@@ -126,7 +127,7 @@ model_add = lm(Current.Gift ~ ., data = nvo_data_mod)
 
 get_loocv_rmse(model_add)
 get_adj_r2(model_add)
-bptest(model_add)
+get_bp_value(model_add)
 
 
 ```
@@ -140,13 +141,13 @@ model_add_back_aic = step(model_add, direction = "backward", trace = 0)
 
 get_loocv_rmse(model_add_back_aic)
 get_adj_r2(model_add_back_aic)
-bptest(model_add_back_aic)
+get_bp_value(model_add_back_aic)
 
 #bic backward selection
 model_add_back_bic = step(model_add, direction = "backward", k = log(nrow(nvo_data_mod)), trace = 0)
 get_loocv_rmse(model_add_back_bic)
 get_adj_r2(model_add_back_bic)
-bptest(model_add_back_bic)
+get_bp_value(model_add_back_bic)
 
 ```
 
@@ -169,7 +170,7 @@ model_start_forward_aic = step(
 
 get_loocv_rmse(model_start_forward_aic)
 get_adj_r2(model_start_forward_aic)
-bptest(model_start_forward_aic)
+get_bp_value(model_start_forward_aic)
 
 model_start_forward_bic = step(
   model_start,
@@ -181,7 +182,7 @@ model_start_forward_bic = step(
 
 get_loocv_rmse(model_start_forward_bic)
 get_adj_r2(model_start_forward_bic)
-bptest(model_start_forward_bic)
+get_bp_value(model_start_forward_bic)
 
 ```
 
@@ -193,7 +194,7 @@ model_int = lm(Current.Gift ~ . ^ 2, data = nvo_data_mod)
 
 get_loocv_rmse(model_int)
 get_adj_r2(model_int)
-bptest(model_int)
+get_bp_value(model_int)
 ```
 
 Backwards Selection on Interaction model
