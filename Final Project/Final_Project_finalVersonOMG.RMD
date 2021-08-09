@@ -468,23 +468,23 @@ summary(three_way_log_model)$call
 
 ```{r, echo = FALSE}
 
-bp_vals = c(get_bp_p_value(add_cur_model)
+bp_vals = round(c(get_bp_p_value(add_cur_model)
             ,get_bp_p_value(two_way_cur_model)
             ,get_bp_p_value(three_way_cur_model)
             ,get_bp_p_value(three_way_log_model)
-            ,get_bp_p_value(three_way_back_aic))
+            ,get_bp_p_value(three_way_back_aic)),4)
 
-rsq_vals = c(get_r2(add_cur_model)
+rsq_vals = round(c(get_r2(add_cur_model)
              ,get_r2(two_way_cur_model)
              ,get_r2(three_way_cur_model)
              ,get_r2(three_way_log_model)
-             ,get_r2(three_way_back_aic))
+             ,get_r2(three_way_back_aic)),4)
 
-aic_vals = c(AIC(add_cur_model)
+aic_vals = round(c(AIC(add_cur_model)
              ,AIC(two_way_cur_model)
              ,AIC(three_way_cur_model)
              ,AIC(three_way_log_model)
-             ,AIC(three_way_back_aic))
+             ,AIC(three_way_back_aic)),4)
 
 param_counts = c(get_param_count(add_cur_model)
              ,get_param_count(two_way_cur_model)
@@ -492,11 +492,11 @@ param_counts = c(get_param_count(add_cur_model)
              ,get_param_count(three_way_log_model)
              ,get_param_count(three_way_back_aic))
 
-rmse_vals = c(get_loocv_rmse(add_cur_model)
+rmse_vals = round(c(get_loocv_rmse(add_cur_model)
               ,get_loocv_rmse(two_way_cur_model)
               ,get_loocv_rmse(three_way_cur_model)
               ,get_loocv_rmse(three_way_log_model)
-              ,get_loocv_rmse(three_way_back_aic))
+              ,get_loocv_rmse(three_way_back_aic)),4)
 
 model_names = c("Simple Additive", "Two-way interaction", "Three-way interaction"
                ,"Three-way interaction with log transformations","Smaller three-way interaction with log transformations from backwards AIC")
@@ -544,36 +544,9 @@ With this in mind, with a multiple $R^2$ around $0.7025$ and a LOOCV RMSE around
 
 The model seems useful for prediction because its LOOCV RMSE is extremely low (Figure 2), indicating that the errors for fitted values of the model are minimized without overfitting to the data.  Additionally, low RMSE values were observed on both the test and train data sets (Figure 3).
 
-However, with a multiple $R^2$ around $0.7025$ the selected model may not be the best possible model for the prediction task in that there is still plenty of observed variation on the data that is not explained by a linear relationship of all predictors and their interaction terms. This could be addressed by adding additional predictors in the underlying data, but that still may not suffice.  The simple fact that all linear models tested during this analysis
-
-To be able to better understand what a donor might donate to a charitable organization based on certain donor characteristics could certainly provide a lot of value to a charitable organization. That's what this study aimed to do with data provided from a national veterans' agency, so that a charitable organization would potentially have a better idea on what donors to target for donations and thus, limit the amount of costs associated with reaching out for donations. As to probably be expected, there are a lot of complexities when thinking about all the different factors that could play into a donor's donation amount, and that was something encountered throughout the process of selecting the best model from the provided data.
-
-When trying to select the model based on the provided data, a lot of different models were attempted and evaluated based on standard model quality and assumption checks. The models ranged in complexity from simple additive models with no transformations to models with 4-way interactions with multiple transformations. The final model chosen ended up being higher on that complexity range, but wasn't the most complex as we'll see. 
-
-Throughout the model selection process, different criterion were used along the way to evaluate the model quality as well as the model assumptions. For model quality, LOOCV RMSE and Adj. R-squared were used. For model assumptions, fitted versus residuals plot, QQ-plot, Breusch-Pagan, and Shapiro-Wilkes test were used.
-
-As seen in Figure X, there are some notable differences in model quality and model assumption values between our selected model and the others. 
-
-For the model quality values...
-
-When looking at the Adj. R-squared value...
-
-When looking at the LOOCV RMSE value... 
-
-When looking at the AIC value...
-
-For the model assumption value...
-
-When looking at the Breusch-Pagan value...
-
-All failing the Shapiro-Wilkes test...
-
-Mention the fitted versus residuals and qq-plot for the model selected
-
-Reference train versus test data for the model being selected
+However, with a multiple $R^2$ around $0.7025$ the selected model may not be the best possible model for the prediction task in that there is still plenty of observed variation on the data that is not explained by a linear relationship of all predictors and their interaction terms. This could be addressed by adding additional predictors in the underlying data, but that still may not suffice.  Given that all linear regression models tested during this analysis failed the normality assumption (Figure 3 and Appendix), it is probable that our data set was not sampled from a normal distribution. Additionally, the constant variance assumption, although upheld in our select model, was easily violated whenever we attempted to reduce model complexity (Figure 2 (BP Test pvalue), Appendix). Accordingly, other models may do a better job of explaining the relationship between the response variables and the predictors in this data set and because of this, likely would be able to produce more reliable donation amount predictions, possibly without sacrificing interpretability.
 
 
-With the final model that was selected, the complexity might limit easy, actionable insights, but it should provide some clarity on what variables from this dataset might be most closely related to `Current.Gift`.  
 
 ### Appendix
 
