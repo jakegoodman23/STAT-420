@@ -178,14 +178,16 @@ During model selection, multiple $R^2$ and leave-one-out cross-validated root me
 The following function was used to return a model's LOOCV RMSE:
 ```{r}
 get_loocv_rmse = function(model) {
-  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+  rmse = sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+  round(rmse,4)
 }
 ```
 
 The following function was used to return a model's multiple $R^2$:
 ```{r}
 get_r2 = function(model) {
-  summary(model)$r.squared
+    r2 = summary(model)$r.squared
+    round(r2,4)
 }
 ```
 
@@ -227,16 +229,16 @@ In addition to the above tests, a fitted versus residuals plot was used to test 
 ```{r}
 # returns fitted versus residuals and Q-Q plots
 diagnostic_plots = function(model, pcol = "grey", lcol = "dodgerblue") {
-
-	par(mfrow=c(1,2))
-	# A fitted versus residuals plot
-	plot(fitted(model), resid(model), col = pcol, pch = 20,
-		xlab = "Fitted", ylab = "Residuals", main = "Fitted vs Residuals Plot")
-	abline(h = 0, col = lcol, lwd = 2)
-	# A Normal Q-Q plot
-	qqnorm(resid(model), main = "Normal Q-Q Plot", col = pcol)
-	qqline(resid(model), col = lcol, lwd = 2)
-
+  
+  par(mfrow=c(1,2))
+  # A fitted versus residuals plot
+  plot(fitted(model), resid(model), col = pcol, pch = 20,
+       xlab = "Fitted", ylab = "Residuals", main = "Fitted vs Residuals Plot"
+       ,sub = "(a)")
+  abline(h = 0, col = lcol, lwd = 2)
+  # A Normal Q-Q plot
+  qqnorm(resid(model), main = "Normal Q-Q Plot", sub = "(b)", col = pcol)
+  qqline(resid(model), col = lcol, lwd = 2)
 }
 ```
 
@@ -453,6 +455,7 @@ get_rmse = function(fit, data, expo = FALSE){
 ##### The selected model: `three_way_log_model`
 
 <font size="2"> **Fig. 1.** The below output is showing how the selected model is constructed. Each of the `.Gift` variables have been log transformed. All 11 predictor variables and their two and three interactions are included. </font>
+
 ```{r, echo = FALSE}
 summary(three_way_log_model)$call
 ```
@@ -573,6 +576,38 @@ With the final model that was selected, the complexity might limit easy, actiona
 
 ### Appendix
 
+##### Simple Additive Model (`add_cur_model`)
+
+```{r, echo = FALSE}
+diagnostic_plots(add_cur_model)
+```
+
+<font size="2"> **Fig. 4.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+
+###### Two-Way Interaction Model (`two_way_cur_model`)
+```{r, echo = FALSE}
+diagnostic_plots(two_way_cur_model)
+```
+
+<font size="2"> **Fig. 5.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+  
+##### Three-Way Interaction Model (`three_way_cur_model`)
+
+```{r, echo = FALSE}
+diagnostic_plots(three_way_cur_model)
+```
+
+<font size="2"> **Fig. 6.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+
+##### Three-Way Interaction Model with Backwards Selection (`three_way_back_aic`)
+
+```{r, echo = FALSE}
+diagnostic_plots(three_way_back_aic)
+```
+
+<font size="2"> **Fig. 7.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+
+
 ##### Group Members
 
 The following students contributed to this group project:
@@ -580,34 +615,6 @@ The following students contributed to this group project:
 - Jake Goodman (NetID: jakeg5)
 - Michael McClanahan (NetID: mjm31)
 
-##### Diagnostic plots for models that were not selected
-
-Simple Additive Model (`add_cur_model`)
-```{r}
-diagnostic_plots(add_cur_model)
-```
-<font size="2"> **Fig. 4.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
-
-Two-Way Interaction Model (`two_way_cur_model`)
-```{r}
-diagnostic_plots(two_way_cur_model)
-```
-
-<font size="2"> **Fig. 5.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
-
-Three-Way Interaction Model (`three_way_cur_model`)
-```{r}
-diagnostic_plots(three_way_cur_model)
-```
-
-<font size="2"> **Fig. 6.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
-
-Three-Way Interaction Model with Backwards Selection (`three_way_back_aic`)
-```{r}
-diagnostic_plots(three_way_back_aic)
-```
-
-<font size="2"> **Fig. 7.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
 
 ### References
 
