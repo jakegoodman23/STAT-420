@@ -433,7 +433,7 @@ get_model_diagnostics(new_mod)
 
 _Selected Model_
 
-The full three way interaction model with log transformations trained on data where unusual observations were not removed was selected.
+The full three way interaction model with log transformations trained on data where unusual observations were not removed was selected (Figure 1).
 
 
 ### Results
@@ -468,23 +468,23 @@ summary(three_way_log_model)$call
 
 ```{r, echo = FALSE}
 
-bp_vals = round(c(get_bp_p_value(add_cur_model)
+bp_vals = c(get_bp_p_value(add_cur_model)
             ,get_bp_p_value(two_way_cur_model)
             ,get_bp_p_value(three_way_cur_model)
             ,get_bp_p_value(three_way_log_model)
-            ,get_bp_p_value(three_way_back_aic)),4)
+            ,get_bp_p_value(three_way_back_aic))
 
-rsq_vals = round(c(get_r2(add_cur_model)
+rsq_vals = c(get_r2(add_cur_model)
              ,get_r2(two_way_cur_model)
              ,get_r2(three_way_cur_model)
              ,get_r2(three_way_log_model)
-             ,get_r2(three_way_back_aic)),4)
+             ,get_r2(three_way_back_aic))
 
 aic_vals = round(c(AIC(add_cur_model)
              ,AIC(two_way_cur_model)
              ,AIC(three_way_cur_model)
              ,AIC(three_way_log_model)
-             ,AIC(three_way_back_aic)),4)
+             ,AIC(three_way_back_aic)),2)
 
 param_counts = c(get_param_count(add_cur_model)
              ,get_param_count(two_way_cur_model)
@@ -492,11 +492,11 @@ param_counts = c(get_param_count(add_cur_model)
              ,get_param_count(three_way_log_model)
              ,get_param_count(three_way_back_aic))
 
-rmse_vals = round(c(get_loocv_rmse(add_cur_model)
+rmse_vals = c(get_loocv_rmse(add_cur_model)
               ,get_loocv_rmse(two_way_cur_model)
               ,get_loocv_rmse(three_way_cur_model)
               ,get_loocv_rmse(three_way_log_model)
-              ,get_loocv_rmse(three_way_back_aic)),4)
+              ,get_loocv_rmse(three_way_back_aic))
 
 model_names = c("Simple Additive", "Two-way interaction", "Three-way interaction"
                ,"Three-way interaction with log transformations","Smaller three-way interaction with log transformations from backwards AIC")
@@ -532,6 +532,7 @@ kable(rmse_comb)
 ```{r, echo = FALSE}
 diagnostic_plots(three_way_log_model)
 ```
+
 <font size="2"> **Fig. 4.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
 
 
