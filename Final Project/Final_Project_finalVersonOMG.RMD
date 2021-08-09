@@ -205,7 +205,8 @@ _Functions for Model Diagnostics_
 During the model selection process, the following function was used to return the p-value of the Breusch-Pagan Test (BP Test) to test the model's adherence to the constant variance assumption:
 ```{r}
 get_bp_p_value = function(model) {
-  unname(bptest(model)$p.value)
+  bp = unname(bptest(model)$p.value)
+  signif(round,digits = 4)
 }
 ```
 
