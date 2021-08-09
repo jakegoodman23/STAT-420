@@ -67,13 +67,13 @@ The following libraries were first loaded as they were used throughout the analy
 ```{r, message = FALSE, warning = FALSE}
 
 # A dependency for bptest()
-library(lmtest)
+library("lmtest")
 
 # Used to obtain variance inflation factors
-library(faraway)
+library("faraway")
 
 # Used for a pretty-print of our data
-library(tibble)
+library("tibble")
 ```
 
 Data was loaded from `nvo.txt`.
@@ -182,13 +182,6 @@ get_loocv_rmse = function(model) {
 }
 ```
 
-<!-- The following function was used to return a model's adjusted $R^2$: -->
-<!-- ```{r} -->
-<!-- get_adj_r2 = function(model) { -->
-<!--   summary(model)$adj.r.squared -->
-<!-- } -->
-<!-- ``` -->
-
 The following function was used to return a model's multiple $R^2$:
 ```{r}
 get_r2 = function(model) {
@@ -198,9 +191,9 @@ get_r2 = function(model) {
 
 The following function was used to quickly evaluate the model by using the above functions to display LOOCV RMSE and adjusted $R^2$:
 ```{r}
-# returns LOOCV_RMSE and Adj. R-Squared values
+# returns LOOCV RMSE and Adj. R-Squared values
 evaluate_model = function(model) {
-	res = c("LOOCV_RMSE" = get_loocv_rmse(model),"Multiple R-squared" = get_r2(model)) 
+	res = c("LOOCV RMSE" = get_loocv_rmse(model),"Multiple R-squared" = get_r2(model)) 
 	res
 }
 ```
@@ -263,7 +256,7 @@ get_model_diagnostics = function(model, pcol = "grey", lcol = "dodgerblue", plot
 
 _Model Selection_
 
-First, a simple additive model with all available predictors was fit to the training data, but it's adjusted $R^2$ was lower than desired, indicating that it was underfitting to the training data.
+First, a simple additive model with all available predictors was fit to the training data, but it's $R^2$ was lower than desired, indicating that it was underfitting to the training data.
 ```{r}
 add_cur_model = lm(Current.Gift ~ ., data = nvo_trn_data)
 evaluate_model(add_cur_model)
@@ -274,7 +267,7 @@ Before testing additional models, variance inflation factors were obtained for t
 vif(add_cur_model)
 ```
 
-Next, because the previous model with all predictors showed to be underfitting, we tested two-way and three-way interaction models using all predictors. For each model, we saw improvements in adjusted $R^2$, indicating that the added complexity in the model was resulting in a better fit, but the full three-way interaction model's LOOCV RMSE started to increase, indicating that this model was overfitting to the training data.
+Next, because the previous model with all predictors showed to be underfitting, we tested two-way and three-way interaction models using all predictors. For each model, we saw improvements in $R^2$, indicating that the added complexity in the model was resulting in a better fit to the data, but the full three-way interaction model's LOOCV RMSE started to increase, indicating that this model was overfitting to the training data.
 
 Two-way interaction model using all predictors:
 ```{r}
@@ -346,7 +339,7 @@ hist(log(nvo_cur_data$Previous.Gift),
      breaks = 50)
 ```
 
-When these log transformations were introduced into the three-way interaction model with all available predictors, we saw a significant improvement in LOOCV RMSE and adjusted $R^2$ was maintained.
+When these log transformations were introduced into the three-way interaction model with all available predictors, we saw a significant improvement in LOOCV RMSE while $R^2$ was maintained.
 
 ```{r}
 three_way_log_model = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = nvo_trn_data)
@@ -439,21 +432,121 @@ _Selected Model_
 
 The full three way interaction model with log transformations trained on data where unusual observations were not removed was selected.
 
+
 ### Results
+
+_Functions to get RMSE and parameter count statistics_
+```{r}
+get_param_count = function(model){
+  length(coef(model))
+}
+
+get_rmse = function(fit, data, expo = FALSE){
+  if(expo == TRUE){
+    fit = exp(fit)
+  }
+  sqrt(mean((data$Current.Gift - fit)^2))
+}
+```
+
+
+##### The selected model: `three_way_log_model`
+
+<font size="2"> **Fig. 1.** The below output is showing how the selected model is constructed. Each of the `.Gift` variables have been log transformed. All 11 predictor variables and their two and three interactions are included. </font>
+```{r, echo = FALSE}
+summary(three_way_log_model)$call
+```
+
+
+##### Model Evaluation data stored in a table for easier cross-model comparison
+
+<font size="2"> **Fig. 2.** The below table gives a comprehensive breakdown of the various model evaluation values (R-squared, LOOCV RMSE, AIC, and Number of Predictors) as well as the p-value for the Breusch-Pagan test which tests for the constant variance assumption. The selected model (`three_way_log_model`) is shown to be the only model that does not violate the constant variance assumption, while not overfitting, by having a BP Test p-value well above any reasonable alpha. Additionally, its r-squared, LOOCV RMSE, and AIC values are very reasonable, if not better than every other model present.</font>
+
+```{r, echo = FALSE}
+
+bp_vals = c(get_bp_p_value(add_cur_model)
+            ,get_bp_p_value(two_way_cur_model)
+            ,get_bp_p_value(three_way_cur_model)
+            ,get_bp_p_value(three_way_log_model)
+            ,get_bp_p_value(three_way_back_aic))
+
+rsq_vals = c(get_r2(add_cur_model)
+             ,get_r2(two_way_cur_model)
+             ,get_r2(three_way_cur_model)
+             ,get_r2(three_way_log_model)
+             ,get_r2(three_way_back_aic))
+
+aic_vals = c(AIC(add_cur_model)
+             ,AIC(two_way_cur_model)
+             ,AIC(three_way_cur_model)
+             ,AIC(three_way_log_model)
+             ,AIC(three_way_back_aic))
+
+param_counts = c(get_param_count(add_cur_model)
+             ,get_param_count(two_way_cur_model)
+             ,get_param_count(three_way_cur_model)
+             ,get_param_count(three_way_log_model)
+             ,get_param_count(three_way_back_aic))
+
+rmse_vals = c(get_loocv_rmse(add_cur_model)
+              ,get_loocv_rmse(two_way_cur_model)
+              ,get_loocv_rmse(three_way_cur_model)
+              ,get_loocv_rmse(three_way_log_model)
+              ,get_loocv_rmse(three_way_back_aic))
+
+model_names = c("Simple Additive", "Two-way interaction", "Three-way interaction"
+               ,"Three-way interaction with log transformations","Smaller three-way interaction with log transformations from backwards AIC")
+model_comp = cbind(model_names,rmse_vals,rsq_vals,bp_vals,aic_vals,param_counts)
+
+colnames(model_comp) = c("Model Name","LOOCV-RMSE ", "R-squared", "BP Test p-value","AIC", "Number of Parameters")
+kable(model_comp)
+
+
+```
+
+
+
+##### RMSE comparison between train and test data
+
+<font size="2"> **Fig. 3.** The below table shows a comparison of RMSE values for the fitted values produced for both the Train and Test datasets. The models were specifically trained on the training data and this comparison was to make sure that the model still performed when ran against unseen data. In this case, the values are reasonably close that lets us still feel good about the model</font>
+
+```{r, echo = FALSE}
+
+trn_rmse = get_rmse(fitted(three_way_log_model),nvo_trn_data,expo = TRUE)
+tst_fit = predict(three_way_log_model, newdata = nvo_tst_data)
+tst_rmse = get_rmse(tst_fit, nvo_tst_data, expo = TRUE)
+
+rmse_comb = cbind(trn_rmse, tst_rmse)
+colnames(rmse_comb) = c("Train RMSE", "Test RMSE")
+kable(rmse_comb)
+```
+
+
+
+##### Diagnostic plots for the selected model
+
+```{r, echo = FALSE}
+diagnostic_plots(three_way_log_model)
+```
+<font size="2"> **Fig. 4.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+
+
 
 ### Discussion
 
 Charitable organizations stand to benefit from being able to predict donation amounts before sending donation requests. In this study we sought out to do just this. Specifically, the goal was to select a linear regression model useful for predicting donation contributions based on demographic information and other relevant statistics around previous donations. We were not interested in a model that would help explain the relationship between donation amounts and demographic information and previous donation statistics.
 
-With this in mind, with an adjusted $R^2$ of $0.6380$ and a LOOCV RMSE of $0.5096$ we believe we selected a model that is useful for the desired task, but likely isn't the best possible for said task.
+With this in mind, with a multiple $R^2$ around $0.7025$ and a LOOCV RMSE around $0.5096$ (Figure 2), we believe we selected a model that is useful for the desired prediction task (Figure 1), but likely isn't the best possible for said task. 
 
-The model is useful
+The model seems useful for prediction because its LOOCV RMSE is extremely low (Figure 2), indicating that the errors for fitted values of the model are minimized without overfitting to the data.  Additionally, low RMSE values were observed on both the test and train data sets (Figure 3).
+
+However, with a multiple $R^2$ around $0.7025$ the selected model may not be the best possible model for the prediction task in that there is still plenty of observed variation on the data that is not explained by a linear relationship of all predictors and their interaction terms.
 
 To be able to better understand what a donor might donate to a charitable organization based on certain donor characteristics could certainly provide a lot of value to a charitable organization. That's what this study aimed to do with data provided from a national veterans' agency, so that a charitable organization would potentially have a better idea on what donors to target for donations and thus, limit the amount of costs associated with reaching out for donations. As to probably be expected, there are a lot of complexities when thinking about all the different factors that could play into a donor's donation amount, and that was something encountered throughout the process of selecting the best model from the provided data.
 
 When trying to select the model based on the provided data, a lot of different models were attempted and evaluated based on standard model quality and assumption checks. The models ranged in complexity from simple additive models with no transformations to models with 4-way interactions with multiple transformations. The final model chosen ended up being higher on that complexity range, but wasn't the most complex as we'll see. 
 
-Throughout the model selection process, different criterion were used along the way to evaluate the model quality as well as the model assumptions. For model quality, LOOCV_RMSE and Adj. R-squared were used. For model assumptions, fitted versus residuals plot, QQ-plot, Breusch-Pagan, and Shapiro-Wilkes test were used.
+Throughout the model selection process, different criterion were used along the way to evaluate the model quality as well as the model assumptions. For model quality, LOOCV RMSE and Adj. R-squared were used. For model assumptions, fitted versus residuals plot, QQ-plot, Breusch-Pagan, and Shapiro-Wilkes test were used.
 
 As seen in Figure X, there are some notable differences in model quality and model assumption values between our selected model and the others. 
 
@@ -461,7 +554,7 @@ For the model quality values...
 
 When looking at the Adj. R-squared value...
 
-When looking at the LOOCV_RMSE value... 
+When looking at the LOOCV RMSE value... 
 
 When looking at the AIC value...
 
@@ -480,13 +573,41 @@ With the final model that was selected, the complexity might limit easy, actiona
 
 ### Appendix
 
-#### Group Members
+##### Group Members
 
 The following students contributed to this group project:
 
 - Jake Goodman (NetID: jakeg5)
 - Michael McClanahan (NetID: mjm31)
 
+##### Diagnostic plots for models that were not selected
+
+Simple Additive Model (`add_cur_model`)
+```{r}
+diagnostic_plots(add_cur_model)
+```
+<font size="2"> **Fig. 4.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+
+Two-Way Interaction Model (`two_way_cur_model`)
+```{r}
+diagnostic_plots(two_way_cur_model)
+```
+
+<font size="2"> **Fig. 5.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+
+Three-Way Interaction Model (`three_way_cur_model`)
+```{r}
+diagnostic_plots(three_way_cur_model)
+```
+
+<font size="2"> **Fig. 6.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
+
+Three-Way Interaction Model with Backwards Selection (`three_way_back_aic`)
+```{r}
+diagnostic_plots(three_way_back_aic)
+```
+
+<font size="2"> **Fig. 7.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
 
 ### References
 
