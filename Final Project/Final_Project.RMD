@@ -20,7 +20,7 @@ opts_chunk$set(cache = TRUE, autodep = TRUE)
 
 ### Introduction
 
-According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information, variables in the data set, from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency. 
+According to the @nccs, as of 2016, over 1.54 million nonprofit organizations were registered in the United States with the IRS. As is the case for most nonprofit organizations, there is reliance on charitable contributions to ensure their ability to continue to deliver their services and value to their respective communities. To help maximize donation profits for such charities, statistical models can be leveraged to provide a better understanding of their ideal donors. Predictive insights, like being able to predict donation amounts before sending a request via direct mail, could improve donor targeting practices, potentially yielding greater profits while minimizing the efforts of valuable marketing resources. With this project, we will be attempting to build a statistical model capable of doing just this. Specifically, we aim to use donor information from a national veterans' agency to predict the amount (in dollars) of each donor's current contribution to said national veteran's agency. 
 
 _Links to the above data sets can be found below in the [References] section._
 
@@ -173,7 +173,7 @@ The main goal of this project was to select the best model for predicting `Curre
 
 _Functions for Model Evaluation_
 
-During model selection, adjusted $R^2$ and leave-one-out cross-validated root mean squared error (LOOCV RMSE) were used to assess quality of fit.  LOOCV RMSE was also used to determine if each model was overfitting to the training data.
+During model selection, multiple $R^2$ and leave-one-out cross-validated root mean squared error (LOOCV RMSE) were used to assess quality of fit.  LOOCV RMSE was also used to determine if each model was overfitting to the training data.
 
 The following function was used to return a model's LOOCV RMSE:
 ```{r}
@@ -182,10 +182,17 @@ get_loocv_rmse = function(model) {
 }
 ```
 
-The following function was used to return a model's adjusted $R^2$:
+<!-- The following function was used to return a model's adjusted $R^2$: -->
+<!-- ```{r} -->
+<!-- get_adj_r2 = function(model) { -->
+<!--   summary(model)$adj.r.squared -->
+<!-- } -->
+<!-- ``` -->
+
+The following function was used to return a model's multiple $R^2$:
 ```{r}
-get_adj_r2 = function(model) {
-  summary(model)$adj.r.squared
+get_r2 = function(model) {
+  summary(model)$r.squared
 }
 ```
 
@@ -193,7 +200,7 @@ The following function was used to quickly evaluate the model by using the above
 ```{r}
 # returns LOOCV_RMSE and Adj. R-Squared values
 evaluate_model = function(model) {
-	res = c("LOOCV_RMSE" = get_loocv_rmse(model),"Adj. R-squared" = get_adj_r2(model)) 
+	res = c("LOOCV_RMSE" = get_loocv_rmse(model),"Multiple R-squared" = get_r2(model)) 
 	res
 }
 ```
@@ -363,25 +370,26 @@ get_model_diagnostics(three_way_log_model_less_interactions)
 ```
 
 ```{r}
-# three_way_back_aic = step(three_way_log_model_less_interactions, direction = "backward", trace = 0)
-# evaluate_model(three_way_back_aic)
-# get_model_diagnostics(three_way_back_aic)
+three_way_back_aic = step(three_way_log_model_less_interactions, direction = "backward", trace = 0)
+evaluate_model(three_way_back_aic)
+get_model_diagnostics(three_way_back_aic)
 ```
 
 The resulting model preserved the appropriate fit of the data, but violated the constant variance assumption in addition to the normality assumption so it was not chosen.
 
 The following adjustments were also attempted:
+
 - Additional log transformations to numeric predictors other than the `.Gift` predictors
 - Polynomial transformations to the predictors other than the `.Gift` predictors
-- The manual removal of predictors (each was attempted)
+- One-at-a-time manual removal of each predictor
 
-Each adjustment did not improve model performance and resulted in a violation of the constant variance assumption. log and polynomial transformations were attempted on other variables, but did not improve model performance and, typically, resulted in a violation of constant variance.
+Each adjustment did not improve model performance and resulted in a violation of the constant variance assumption. 
 
 _Unusual Observations_
 
-In an attempt to further improve model fit, the full three way interaction model with log transformations was re-fit three times, each time with either high leverage observations, high influence observations, or outliers removed.  This did not result an any added benefit.
+In an attempt to further improve model fit, the full three way interaction model with log transformations was re-fit three times, each time with either high leverage observations, high influence observations, or outliers removed from the training data. This
 
-Functions to identify unsual observations:
+Functions to identify unusual observations:
 ```{r}
 # finds observations with leverage greater than 2 times the average leverage
 get_high_leverage = function(model){
@@ -432,6 +440,43 @@ _Selected Model_
 The full three way interaction model with log transformations trained on data where unusual observations were not removed was selected.
 
 ### Results
+
+### Discussion
+
+Charitable organizations stand to benefit from being able to predict donation amounts before sending donation requests. In this study we sought out to do just this. Specifically, the goal was to select a linear regression model useful for predicting donation contributions based on demographic information and other relevant statistics around previous donations. We were not interested in a model that would help explain the relationship between donation amounts and demographic information and previous donation statistics.
+
+With this in mind, with an adjusted $R^2$ of $0.6380$ and a LOOCV RMSE of $0.5096$ we believe we selected a model that is useful for the desired task, but likely isn't the best possible for said task.
+
+The model is useful
+
+To be able to better understand what a donor might donate to a charitable organization based on certain donor characteristics could certainly provide a lot of value to a charitable organization. That's what this study aimed to do with data provided from a national veterans' agency, so that a charitable organization would potentially have a better idea on what donors to target for donations and thus, limit the amount of costs associated with reaching out for donations. As to probably be expected, there are a lot of complexities when thinking about all the different factors that could play into a donor's donation amount, and that was something encountered throughout the process of selecting the best model from the provided data.
+
+When trying to select the model based on the provided data, a lot of different models were attempted and evaluated based on standard model quality and assumption checks. The models ranged in complexity from simple additive models with no transformations to models with 4-way interactions with multiple transformations. The final model chosen ended up being higher on that complexity range, but wasn't the most complex as we'll see. 
+
+Throughout the model selection process, different criterion were used along the way to evaluate the model quality as well as the model assumptions. For model quality, LOOCV_RMSE and Adj. R-squared were used. For model assumptions, fitted versus residuals plot, QQ-plot, Breusch-Pagan, and Shapiro-Wilkes test were used.
+
+As seen in Figure X, there are some notable differences in model quality and model assumption values between our selected model and the others. 
+
+For the model quality values...
+
+When looking at the Adj. R-squared value...
+
+When looking at the LOOCV_RMSE value... 
+
+When looking at the AIC value...
+
+For the model assumption value...
+
+When looking at the Breusch-Pagan value...
+
+All failing the Shapiro-Wilkes test...
+
+Mention the fitted versus residuals and qq-plot for the model selected
+
+Reference train versus test data for the model being selected
+
+
+With the final model that was selected, the complexity might limit easy, actionable insights, but it should provide some clarity on what variables from this dataset might be most closely related to `Current.Gift`.  
 
 ### Appendix
 
