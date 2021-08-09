@@ -436,6 +436,7 @@ new_trn_data = nvo_trn_data[-get_outliers(three_way_log_model), ]
 new_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_trn_data)
 evaluate_model(new_mod)
 get_model_diagnostics(new_mod)
+
 ```
 
 - High leverage removal results
@@ -445,6 +446,10 @@ new_trn_data = nvo_trn_data[-get_high_leverage(three_way_log_model), ]
 new_mod = lm(log(Current.Gift) ~ (log(Previous.Gift) + log(Largest.Gift) + log(Smallest.Gift) + Age + Own.Home. + Num.Children + Total.Wealth + Sex + Number.of.Gifts + Time.Between.Gifts + Other.Gifts) ^ 3, data = new_trn_data)
 evaluate_model(new_mod)
 get_model_diagnostics(new_mod)
+nrow(nvo_trn_data)
+nrow(new_trn_data)
+
+
 ```
 
 - High influence removal results
@@ -462,6 +467,16 @@ _Selected Model_
 The full three way interaction model with log transformations trained on data where unusual observations were not removed was selected.
 
 ### Results
+
+Info on the Model Selected: `three_way_log_model`
+
+
+```{r}
+summary(three_way_log_model)$call
+```
+
+<font size="1"> **Fig. 1.** The above output is showing how the selected model is constructed. Each of the `.Gift` variables have been log transformed and all of the predictors are included in all possible three way interactions. </font>
+
 
 Model Evaluation data stored in a table for easier cross-model comparison
 ```{r, echo = FALSE}
@@ -506,7 +521,7 @@ kable(model_comp)
 
 ```
 
-<font size="1"> **Fig. 1.** The above table gives a comprehensive breakdown of the various model evaluation values (R-squared, LOOCV_RMSE, AIC, and Number of Predictors) as well as the p-value for the Breusch-Pagan test which tests for the constant variance assumption. The selected model (`three_way_log_model`) is shown to be the only model that does not violate the constant variance assumption, while not overfitting, by having a BP Test p-value well above any reasonable alpha. Additionally, its r-squared, loocv_rmse, and AIC values are very reasonable, if not better than every other model present.</font>
+<font size="1"> **Fig. 2.** The above table gives a comprehensive breakdown of the various model evaluation values (R-squared, LOOCV_RMSE, AIC, and Number of Predictors) as well as the p-value for the Breusch-Pagan test which tests for the constant variance assumption. The selected model (`three_way_log_model`) is shown to be the only model that does not violate the constant variance assumption, while not overfitting, by having a BP Test p-value well above any reasonable alpha. Additionally, its r-squared, loocv_rmse, and AIC values are very reasonable, if not better than every other model present.</font>
 
 
 RMSE comparison between Train and Test data
@@ -522,7 +537,7 @@ colnames(rmse_comb) = c("Train RMSE", "Test RMSE")
 kable(rmse_comb)
 ```
 
-<font size="1"> **Fig. 2.** The above table shows a comparison of RMSE values for the fitted values produced for both the Train and Test datasets. The models were specifically trained on the training data and this comparison was to make sure that the model still performed when ran against unseen data. In this case, the values are reasonably close that lets us still feel good about the model. The p-values for the Shapiro-Wilkes test were not included above as each of them were well below any reasonable alpha level and thus violates the normality assumption.</font>
+<font size="1"> **Fig. 3.** The above table shows a comparison of RMSE values for the fitted values produced for both the Train and Test datasets. The models were specifically trained on the training data and this comparison was to make sure that the model still performed when ran against unseen data. In this case, the values are reasonably close that lets us still feel good about the model. The p-values for the Shapiro-Wilkes test were not included above as each of them were well below any reasonable alpha level and thus violates the normality assumption.</font>
 
 
 ### Discussion
