@@ -503,7 +503,7 @@ colnames(rmse_comb) = c("Train RMSE", "Test RMSE")
 kable(rmse_comb)
 ```
 
-<font size="1"> **Fig. 2.** The above table shows a comparison of RMSE values for the fitted values produced for both the Train and Test datasets. The models were specifically trained on the training data and this comparison was to make sure that the model still performed when ran against unseen data. In this case, the values are reasonably close that lets us still feel good about the model</font>
+<font size="1"> **Fig. 2.** The above table shows a comparison of RMSE values for the fitted values produced for both the Train and Test datasets. The models were specifically trained on the training data and this comparison was to make sure that the model still performed when ran against unseen data. In this case, the values are reasonably close that lets us still feel good about the model. The p-values for the Shapiro-Wilkes test were not included above as each of them were well below any reasonable alpha level and thus violates the normality assumption.</font>
 
 
 ### Discussion
