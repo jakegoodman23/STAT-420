@@ -471,7 +471,7 @@ The full three way interaction model with log transformations trained on data wh
 Info on the Model Selected: `three_way_log_model`
 
 
-```{r}
+```{r, echo = FALSE}
 summary(three_way_log_model)$call
 ```
 
