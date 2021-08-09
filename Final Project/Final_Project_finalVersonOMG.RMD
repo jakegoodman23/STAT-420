@@ -206,7 +206,7 @@ During the model selection process, the following function was used to return th
 ```{r}
 get_bp_p_value = function(model) {
   bp = unname(bptest(model)$p.value)
-  signif(round,digits = 4)
+  signif(bp,digits = 4)
 }
 ```
 
