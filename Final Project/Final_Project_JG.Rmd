@@ -207,6 +207,25 @@ evaluate_model = function(model) {
 }
 ```
 
+The following function was used to calculate the number of predictors in a model:
+
+```{r}
+get_num_preds = function(model){
+  preds = length(coef(model)) - 1
+  preds
+}
+```
+
+The following function was used to manually calculate the RMSE value to evaluate the train-test split:
+```{r}
+get_rmse = function(fit, data, expo = FALSE){
+  if(expo == TRUE){
+    fit = exp(fit)
+  }
+  sqrt(mean((data$Current.Gift - fit)^2))
+}
+```
+
 _Functions for Model Diagnostics_
 
 During the model selection process, the following function was used to return the p-value of the Breusch-Pagan Test (BP Test) to test the model's adherence to the constant variance assumption:
@@ -490,7 +509,7 @@ kable(model_comp)
 <font size="1"> **Fig. 1.** The above table gives a comprehensive breakdown of the various model evaluation values (R-squared, LOOCV_RMSE, AIC, and Number of Predictors) as well as the p-value for the Breusch-Pagan test which tests for the constant variance assumption. The selected model (`three_way_log_model`) is shown to be the only model that does not violate the constant variance assumption, while not overfitting, by having a BP Test p-value well above any reasonable alpha. Additionally, its r-squared, loocv_rmse, and AIC values are very reasonable, if not better than every other model present.</font>
 
 
-RMSE comparison betweeen Train and Test data
+RMSE comparison between Train and Test data
 
 ```{r, echo = FALSE}
 
@@ -556,6 +575,7 @@ Simple Additive Model (`add_cur_model`)
 ```{r}
 diagnostic_plots(add_cur_model)
 ```
+
 <font size="1"> **Fig. 4.** (A): A comparison of the model's fitted values versus its residual values with a blue horizontal line at the zero value of the y-axis. The model is said to abide by the constant variance assumption if the spread of the residuals is roughly the same for the fitted values. Additionally, if the mean of the residuals is roughly zero, the model is assumed to have a valid linearity assumption. (B): A normal Q-Q plot is shown to see if the model has a valid normality assumption with that being the case if the data points closely follow the line present on the plot.</font>
 
 Two-Way Interaction Model (`two_way_cur_model`)
